@@ -419,6 +419,20 @@ suite('sjasm project', () => {
 			assert.ok(names.includes(n), n);
 	});
 
+	test('data directives and CSpect instructions are not references', () => {
+		const p = makeProject({
+			'main.asm': [
+				'val     WORD 5',
+				'        break',
+				'        exd',
+				'        ld hl,val'
+			].join('\n')
+		});
+		assert.equal(p.getDefinitions('L:val')[0].kind, 'data');
+		assert.equal(p.getUnresolved().length, 0);
+		assert.equal(p.getReferences('L:val').length, 1);
+	});
+
 	test('update after change', () => {
 		const p = makeProject({'main.asm': 'lbl: nop\n jp lbl'});
 		assert.equal(p.getReferences('L:lbl').length, 1);

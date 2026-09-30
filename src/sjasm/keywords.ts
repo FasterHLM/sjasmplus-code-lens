@@ -25,14 +25,15 @@ export const WORD_OPERATORS = words(`
 `);
 
 
-/** Z80 mnemonics including undocumented ones, Z80N and R800 extras sjasmplus accepts. */
+/** Z80 mnemonics including undocumented ones, Z80N, CSpect and R800 extras and aliases sjasmplus accepts. */
 export const MNEMONICS = words(`
-	adc add and bit call ccf cp cpd cpdr cpi cpir cpl daa dec di djnz ei ex exa exx
-	halt im in inc ind indr ini inir jp jr ld ldd lddr ldi ldir neg nop or otdr otir
+	adc add and bit call ccf cp cpd cpdr cpi cpir cpl daa dec di djnz ei ex exa exd exx
+	halt im in inc ind indr inf ini inir jp jr ld ldd lddr ldi ldir neg nop or otdr otir
 	out outd outi pop push res ret reti retn rl rla rlc rlca rld rr rra rrc rrca rrd
 	rst sbc scf set sla sli sll sra srl sub xor
 	ldix ldws ldirx lddx lddrx ldpirx outinb mul swapnib mirror nextreg pixeldn
 	pixelad setae test bsla bsra bsrl bsrf brlc
+	break exit setbrk clrbrk
 	mulub muluw
 `);
 
@@ -56,7 +57,7 @@ export const DIRECTIVES = words(`
 	relocate_end relocate_start relocate_table rept save3dos saveamsdos savebin savecdt
 	savecpcsna savecpr savedev savehex savehob savenex savesna savetap savetrd setbp
 	setbreakpoint shellexec size sldopt slot struct tapend tapout text textarea undefine
-	unphase while
+	unphase while word
 `);
 
 
@@ -84,18 +85,9 @@ export const DEFL_DIRECTIVES = words(`defl =`);
 /** Data directives (labels in front of them are data, not code). */
 export const DATA_DIRECTIVES = words(`
 	abyte abytec abytez block byte d24 db dc dd defb defd defg defh defm defp defs defw
-	dg dh dm dp ds dw dword dz hex text
+	dg dh dm dp ds dw dword dz hex text word
 `);
 
-
-/** Directives that open or close a block. */
-export const BLOCK_START = words(`module struct macro dup rept while if ifn ifdef ifndef ifused ifnused lua`);
-export const BLOCK_END = words(`endmodule endmod ends endm edup endr endw endif endlua`);
-
-
-export function isRegister(word: string): boolean {
-	return REGISTERS.has(word.toLowerCase());
-}
 
 export function isKnownOperator(word: string): boolean {
 	const w = word.toLowerCase();
