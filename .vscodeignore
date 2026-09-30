@@ -1,0 +1,17 @@
+node_modules/**
+out/src/**
+out/tests/**
+**/*.tests.*
+tests/**
+src/**
+**/*.map
+.gitignore
+tsconfig.json
+.github
+design/
+notes.md
+*.vsix
+*.vsix.zip
+.*/
+assets/remote/
+**/coverage/

@@ -1,0 +1,100 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "watch", // Used by "Launch Extension" in launch.json
+            "dependsOn": [
+                "watch-tsc",
+                "watch-node",
+                "watch-browser"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+
+        {
+            "type": "npm",
+            "label": "watch-tsc",
+            "script": "watch-tsc",
+            "problemMatcher": "$tsc-watch",
+            "isBackground": true,
+        },
+
+        {
+            "label": "watch-node",
+            "type": "npm",
+            "script": "watch-node",
+            "problemMatcher": {
+                "owner": "watch-node",
+                "pattern": [
+                    {
+                        // File name and position
+                        "regexp": "^\\s*(.+):(\\d+):(\\d+):\\s*$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "message": 1 // Multiline does not work for some reason
+                    },
+                ],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": {
+                        "regexp": "\\s*\\[watch\\] build started"
+                    },
+                    "endsPattern": {
+                        "regexp": "^\\s*\\[watch\\] build finished"
+                    }
+                }
+            },
+            "isBackground": true,
+            "group": "build"
+        },
+
+        {
+            "label": "watch-browser",
+            "type": "npm",
+            "script": "watch-browser",
+            "problemMatcher": {
+                "owner": "watch-browser",
+                "pattern": [
+                    {
+                        // File name and position
+                        "regexp": "^\\s*(.+):(\\d+):(\\d+):\\s*$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "message": 1 // Multiline does not work for some reason
+                    },
+                ],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": {
+                        "regexp": "\\s*\\[watch\\] build started"
+                    },
+                    "endsPattern": {
+                        "regexp": "^\\s*\\[watch\\] build finished"
+                    }
+                }
+            },
+            "isBackground": true,
+            "group": "build"
+        },
+
+        {
+            "label": "Clean SonarLint Problems",
+            "type": "shell",
+            "command": "echo Cleaning problems...",
+            "group": "none",
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "a^"
+                },
+                "owner": "sonarlint" // Right-click/copy to get the owner
+            }
+        }
+    ]
+}
