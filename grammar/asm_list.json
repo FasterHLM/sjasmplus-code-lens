@@ -3,20 +3,135 @@
 	"name": "sjasmplus-list",
 	"patterns": [
 		{
-			"include": "#listfile"
+			"include": "#file-marker"
 		},
 		{
-			"include": "source.sjasmplus"
+			"include": "#listing-line"
+		},
+		{
+			"include": "#symbol-table"
+		},
+		{
+			"include": "#labelslist-line"
+		},
+		{
+			"include": "#diagnostic"
 		}
 	],
 	"repository": {
-		"listfile": {
+		"file-marker": {
+			"match": "^(#)\\s*(file (?:opened|closed)):\\s*(.*)$",
+			"name": "comment.line.file-marker.sjasmplus",
+			"captures": {
+				"1": {
+					"name": "punctuation.definition.comment.sjasmplus"
+				},
+				"3": {
+					"name": "string.unquoted.filename.sjasmplus"
+				}
+			}
+		},
+		"listing-line": {
+			"begin": "^(?=.{6}[0-9A-F]{4}(?: |$))( *[^\\s+]?[0-9]*)(\\+*)( *)([0-9A-F]{4})(.{0,13})(?:([>{])|.)?",
+			"beginCaptures": {
+				"1": {
+					"name": "constant.numeric.integer.decimal.line-number.sjasmplus"
+				},
+				"2": {
+					"name": "keyword.operator.include-level.sjasmplus"
+				},
+				"4": {
+					"name": "constant.numeric.integer.hexadecimal.address.sjasmplus"
+				},
+				"5": {
+					"patterns": [
+						{
+							"match": "[0-9A-F]{2}",
+							"name": "constant.numeric.integer.hexadecimal.machine-code.sjasmplus"
+						},
+						{
+							"match": "\\.\\.\\.",
+							"name": "punctuation.separator.continuation.sjasmplus"
+						},
+						{
+							"match": "~",
+							"name": "comment.other.skipped.sjasmplus"
+						}
+					]
+				},
+				"6": {
+					"name": "keyword.operator.macro-expansion.sjasmplus"
+				}
+			},
+			"while": "(?!)",
 			"patterns": [
 				{
-					"name": "constant.numeric.integer.hexadecimal.asm",
-					"match": "\\b[0-9a-fA-F]{4,}(\\.\\w+)?\\s+([0-9a-fA-F]{2,}\\s)*"
+					"include": "source.sjasmplus"
 				}
 			]
+		},
+		"symbol-table": {
+			"patterns": [
+				{
+					"match": "^(?:Value    Label|------ - -+)$",
+					"name": "comment.line.symbol-table.sjasmplus"
+				},
+				{
+					"match": "^(0x[0-9A-F]+) ([ X]) (\\S+)$",
+					"captures": {
+						"1": {
+							"name": "constant.numeric.integer.hexadecimal.address.sjasmplus"
+						},
+						"2": {
+							"name": "comment.other.unused.sjasmplus"
+						},
+						"3": {
+							"name": "entity.name.function.label.sjasmplus"
+						}
+					}
+				}
+			]
+		},
+		"diagnostic": {
+			"match": "^(.+?)\\(([0-9]+)\\): (?:(error)|(warning))(?:\\[([A-Za-z0-9_-]+)\\])?: (.*)$",
+			"name": "meta.diagnostic.sjasmplus",
+			"captures": {
+				"1": {
+					"name": "string.unquoted.filename.sjasmplus"
+				},
+				"2": {
+					"name": "constant.numeric.integer.decimal.line-number.sjasmplus"
+				},
+				"3": {
+					"name": "keyword.other.diagnostic.error.sjasmplus"
+				},
+				"4": {
+					"name": "keyword.other.diagnostic.warning.sjasmplus"
+				},
+				"5": {
+					"name": "support.constant.warning-id.sjasmplus"
+				},
+				"6": {
+					"name": "string.unquoted.message.sjasmplus"
+				}
+			}
+		},
+		"labelslist-line": {
+			"match": "^([0-9A-F]{2})(:)([0-9A-F]{4}) (\\S+)$",
+			"captures": {
+				"1": {
+					"name": "constant.numeric.integer.hexadecimal.page.sjasmplus"
+				},
+				"2": {
+					"name": "punctuation.separator.sjasmplus"
+				},
+				"3": {
+					"name": "constant.numeric.integer.hexadecimal.address.sjasmplus"
+				},
+				"4": {
+					"name": "entity.name.function.label.sjasmplus"
+				}
+			}
 		}
 	},
 	"scopeName": "source.sjasmplus.list"
