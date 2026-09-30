@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- sjasmplus Code Lens icon: a reference-count code lens above a label, with rainbow corner stripes -->
+  <defs>
+    <clipPath id="sq"><rect x="8" y="8" width="240" height="240" rx="52"/></clipPath>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1d24"/>
+      <stop offset="1" stop-color="#0c0c10"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded-square body -->
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+
+  <!-- four diagonal stripes in the bottom-right corner -->
+  <g clip-path="url(#sq)">
+    <polygon fill="#e8322b" points="97.4,260 260,97.4 260,124.3 124.3,260"/>
+    <polygon fill="#f6d31c" points="124.3,260 260,124.3 260,151.2 151.2,260"/>
+    <polygon fill="#2fb84f" points="151.2,260 260,151.2 260,178.1 178.1,260"/>
+    <polygon fill="#22b8e0" points="178.1,260 260,178.1 260,260"/>
+  </g>
+
+  <!-- faint rim so the edge stays visible on dark backgrounds -->
+  <rect x="9.5" y="9.5" width="237" height="237" rx="50.5" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="3"/>
+
+  <!-- code lens: reference-count badge -->
+  <rect x="40" y="34" width="72" height="42" rx="21" fill="#22b8e0"/>
+  <path transform="translate(76 55)" d="M-8 -13 H8 L-1 -3 A8 8 0 1 1 -7.2 9.2"
+        fill="none" stroke="#0c0c10" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- label: -->
+  <rect x="40" y="94" width="128" height="28" rx="6" fill="#f5f5f5"/>
+  <rect x="178" y="95" width="11" height="11" rx="2" fill="#f5f5f5"/>
+  <rect x="178" y="111" width="11" height="11" rx="2" fill="#f5f5f5"/>
+
+  <!-- indented instructions -->
+  <rect x="72" y="142" width="96" height="24" rx="6" fill="#8b90a0"/>
+  <rect x="72" y="184" width="56" height="24" rx="6" fill="#8b90a0"/>
+</svg>
