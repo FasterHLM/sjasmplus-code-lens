@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import {readFileSync} from 'fs';
-import {PackageInfo} from './whatsnew/packageinfo';
-import {DonateInfo} from './donate/donateinfo';
+import {PackageInfo} from './packageinfo';
 
 
 export class HexCalcProvider implements vscode.WebviewViewProvider {
@@ -21,15 +20,6 @@ export class HexCalcProvider implements vscode.WebviewViewProvider {
 		this.webview.options = {
 			enableScripts: true
 		};
-
-		// Handle messages from the webview
-		this.webview.onDidReceiveMessage(message => {
-			switch (message.command) {	// NOSONAR
-				case 'donateClicked':
-					DonateInfo.openDonateWebView();
-					break;
-			}
-		});
 
 		// Create html code
 		this.setMainHtml();
@@ -59,14 +49,6 @@ export class HexCalcProvider implements vscode.WebviewViewProvider {
 		mainHtml = mainHtml.replace('//${init}', `
 let hexPrefix = "${hexPrefix}";`
 		);
-
-		// Get donated state
-		const donated = configuration.get<boolean>('donated');
-		// Set button
-		if (!donated) {
-			mainHtml = mainHtml.replace('<!--${donate}-->', `
-		<button class="button-donate" style="float:right" onclick="donateClicked()">Donate...<div style="float:right;font-size:50%">ASM Code Lens</div></button>`);
-		}
 
 		// Set content
 		this.webview.html = mainHtml;

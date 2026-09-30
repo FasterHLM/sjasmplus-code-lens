@@ -3,7 +3,6 @@ import {AllowedLanguageIds} from './languageId';
 import {CommonRegexes} from './regexes/commonregexes';
 import {grep, grepTextDocument, reduceLocations} from './grep';
 import {Config} from './config';
-import {DonateInfo} from './donate/donateinfo';
 
 
 
@@ -44,9 +43,6 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
      * @param token
      */
     public async provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.CodeLens[] | undefined> {
-        // Show donate info
-        DonateInfo.checkDonateInfo();
-
         // Check which workspace
         const config = Config.getConfigForDoc(document);
         if (!config?.enableCodeLenses)

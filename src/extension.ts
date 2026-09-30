@@ -9,11 +9,8 @@ import {CompletionProposalsProvider} from './CompletionProposalsProvider';
 import {Commands} from './Commands';
 import {setCustomCommentPrefix} from './comments';
 import {HexCalcProvider} from './HexCalcProvider';
-import {WhatsNewView} from './whatsnew/whatsnewview';
-import {PackageInfo} from './whatsnew/packageinfo';
-import {GlobalStorage} from './globalstorage';
+import {PackageInfo} from './packageinfo';
 import {Config} from './config';
-import {DonateInfo} from './donate/donateinfo';
 import {WorkspaceSymbolProvider} from './WorkspaceSymbolProvider';
 import {FoldingProvider} from './FoldingRangeProvider';
 
@@ -23,22 +20,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Init package info
     PackageInfo.Init(context);
-
-    // Init global storage
-    GlobalStorage.Init(context);
-
-    // Check version for donate info
-    DonateInfo.checkVersion();
-
-    // Check version and show 'What's new' if necessary.
-    const mjrMnrChanged = WhatsNewView.updateVersion();
-    if (mjrMnrChanged) {
-        // Major or minor version changed so show the whatsnew page.
-        new WhatsNewView(); // NOSONAR
-    }
-    // Register the additional command to view the "Whats' New" page.
-    context.subscriptions.push(vscode.commands.registerCommand("asm-code-lens.whatsNew", () => new WhatsNewView()));
-
 
     // Register the hex calculator webviews
     hexCalcExplorerProvider = new HexCalcProvider();
@@ -100,15 +81,12 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
 
     // Check for the hex calculator params
     if (event) {
-        if (event.affectsConfiguration('asm-code-lens.hexCalculator.hexPrefix')
-            || event.affectsConfiguration('asm-code-lens.donated')) {
+        if (event.affectsConfiguration('asm-code-lens.hexCalculator.hexPrefix')) {
             // Update the hex calculators
             if (hexCalcExplorerProvider)
                 hexCalcExplorerProvider.setMainHtml();
             if (hexCalcDebugProvider)
                 hexCalcDebugProvider.setMainHtml();
-            // Update the donate info
-            DonateInfo.donatedPreferencesChanged();
         }
     }
 

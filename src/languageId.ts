@@ -2,7 +2,7 @@ import * as path from 'path';
 import {strict as assert} from 'assert';
 import * as vscode from 'vscode';
 import {FuncCache} from './funccache';
-import {PackageInfo} from './whatsnew/packageinfo';
+import {PackageInfo} from './packageinfo';
 
 /**
  * The known language IDs.

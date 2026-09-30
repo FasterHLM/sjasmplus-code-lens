@@ -1,6 +1,3 @@
-import {vscode} from './vscode-import';
-
-
 // Prefix for hex values (e.g. "0x").
 declare let hexPrefix: string;
 
@@ -144,17 +141,6 @@ globalThis.keypress = function (obj, event, numberBase) {
 		// Clear input value
 		obj.value = '';
 	}
-}
-
-
-/**
- * Send message that donate button has been clicked.
- */
-// @ts-ignore
-globalThis.donateClicked = function () {
-	vscode.postMessage({
-		command: 'donateClicked'
-	});
 }
 
 

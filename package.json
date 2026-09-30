@@ -20,9 +20,6 @@
         "type": "git",
         "url": "https://github.com/maziac/asm-code-lens"
     },
-    "sponsor": {
-        "url": "https://github.com/sponsors/maziac"
-    },
     "bugs": {
         "url": "https://github.com/maziac/asm-code-lens/issues"
     },
@@ -204,22 +201,10 @@
                     "markdownDescription": "The prefix to use for hex values, e.g. `0x` or `$`",
                     "type": "string",
                     "default": "0x"
-                },
-                "asm-code-lens.donated": {
-                    "order": 1000,
-                    "scope": "application",
-                    "markdownDescription": "If you donated (press the `Donate...` button in hex calculator to do so) you can hide the button by setting this parameter.",
-                    "type": "boolean",
-                    "default": false
                 }
             }
         },
         "commands": [
-            {
-                "command": "asm-code-lens.whatsNew",
-                "title": "Show \"What's New\" page of this ASM-Code-Lens release.",
-                "category": "asm-code-lens"
-            },
             {
                 "command": "asm-code-lens.find-labels-with-no-reference",
                 "title": "Find Labels with no Reference",
@@ -324,7 +309,7 @@
         "test": "mocha -u tdd ./out/tests/",
         "vscode:prepublish": "npm run esbuild-node -- --minify && npm run esbuild-browser -- --minify",
         "esbuild-node": "esbuild ./src/extension.ts --bundle --outdir=out --external:vscode --format=cjs --platform=node",
-        "esbuild-browser": "esbuild ./src/html/hexcalc.ts ./src/html/donate.ts --bundle --outdir=out/html --platform=browser",
+        "esbuild-browser": "esbuild ./src/html/hexcalc.ts --bundle --outdir=out/html --platform=browser",
         "watch-node": "npm run esbuild-node -- --sourcemap --watch",
         "watch-browser": "npm run esbuild-browser -- --sourcemap --watch",
         "package": "vsce package"
@@ -336,7 +321,6 @@
         "@types/mocha": "10.0.0",
         "@types/node": "^18.8.2",
         "@types/vscode": "^1.71.0",
-        "@types/vscode-webview": "^1.57.0",
         "esbuild": "^0.25.0",
         "mocha": "^10.4.0",
         "source-map-support": "^0.5.21",
