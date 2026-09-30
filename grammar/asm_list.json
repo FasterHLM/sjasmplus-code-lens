@@ -1,12 +1,12 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "list",
+	"name": "sjasmplus-list",
 	"patterns": [
 		{
 			"include": "#listfile"
 		},
 		{
-			"include": "source.asm"
+			"include": "source.sjasmplus"
 		}
 	],
 	"repository": {
@@ -19,5 +19,5 @@
 			]
 		}
 	},
-	"scopeName": "source.asm.list"
+	"scopeName": "source.sjasmplus.list"
 }

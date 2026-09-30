@@ -33,7 +33,7 @@ export class FoldingProvider implements vscode.FoldingRangeProvider {
 		const foldingRanges: vscode.FoldingRange[] = [];
 
 		// Prepare regexes
-		const regexLabel = CommonRegexes.regexLabel(config, 'asm-collection');
+		const regexLabel = CommonRegexes.regexLabel(config, 'sjasmplus');
 		const regexCommentMultipleStart = FoldingRegexes.regexCommentMultipleStart();
 		const regexCommentMultipleEnd = FoldingRegexes.regexCommentMultipleEnd();
 		const regexCommentSingle = FoldingRegexes.regexCommentSingleLine(Config.globalToggleCommentPrefix);

@@ -24,11 +24,11 @@ export function activate(context: vscode.ExtensionContext) {
     // Register the hex calculator webviews
     hexCalcExplorerProvider = new HexCalcProvider();
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider("asm-code-lens.calcview-explorer", hexCalcExplorerProvider, {webviewOptions: {retainContextWhenHidden: true}})
+        vscode.window.registerWebviewViewProvider("sjasmplus-code-lens.calcview-explorer", hexCalcExplorerProvider, {webviewOptions: {retainContextWhenHidden: true}})
     );
     hexCalcDebugProvider = new HexCalcProvider();
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider("asm-code-lens.calcview-debug", hexCalcDebugProvider, {webviewOptions: {retainContextWhenHidden: true}})
+        vscode.window.registerWebviewViewProvider("sjasmplus-code-lens.calcview-debug", hexCalcDebugProvider, {webviewOptions: {retainContextWhenHidden: true}})
     );
 
     // Enable logging.
@@ -49,14 +49,14 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     // Register commands.
-    vscode.commands.registerCommand('asm-code-lens.find-labels-with-no-reference', async () => {
+    vscode.commands.registerCommand('sjasmplus-code-lens.find-labels-with-no-reference', async () => {
         // Get current text editor to get current project/root folder.
         const editor = vscode.window.activeTextEditor;
         const doc = editor?.document;
         if (!doc)
             return;
         const languageId = doc.languageId;
-        if (languageId != 'asm-collection' && languageId != 'asm-list-file')
+        if (languageId != 'sjasmplus' && languageId != 'sjasmplus-list')
             return;
         // Check which workspace
         const config = Config.getConfigForDoc(doc);
@@ -81,7 +81,7 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
 
     // Check for the hex calculator params
     if (event) {
-        if (event.affectsConfiguration('asm-code-lens.hexCalculator.hexPrefix')) {
+        if (event.affectsConfiguration('sjasmplus-code-lens.hexCalculator.hexPrefix')) {
             // Update the hex calculators
             if (hexCalcExplorerProvider)
                 hexCalcExplorerProvider.setMainHtml();
@@ -106,8 +106,8 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
 
     // Both "languages": asm files and list files.
     const asmListFiles: vscode.DocumentSelector = [
-        {scheme: "file", language: 'asm-collection'},
-        {scheme: "file", language: 'asm-list-file'}
+        {scheme: "file", language: 'sjasmplus'},
+        {scheme: "file", language: 'sjasmplus-list'}
     ];
 
     // Multiroot: One provider for all workspace folders:
@@ -162,11 +162,11 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
     }
 
     // Register (always, even if disabled)
-    regFoldingProvider = vscode.languages.registerFoldingRangeProvider({scheme: "file", language: 'asm-collection'}, new FoldingProvider());
+    regFoldingProvider = vscode.languages.registerFoldingRangeProvider({scheme: "file", language: 'sjasmplus'}, new FoldingProvider());
         context.subscriptions.push(regFoldingProvider);
 
     // Toggle line Comment configuration
-    vscode.languages.setLanguageConfiguration("asm-collection", {comments: {lineComment: Config.globalToggleCommentPrefix, blockComment: ["/*", "*/"]}});
+    vscode.languages.setLanguageConfiguration("sjasmplus", {comments: {lineComment: Config.globalToggleCommentPrefix, blockComment: ["/*", "*/"]}});
     // Store
     setCustomCommentPrefix(Config.globalToggleCommentPrefix);
 
@@ -178,7 +178,7 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
     ];
     if (Config.globalEnablePushPopMatching)
         brackets.push(["push", "pop"]);
-    vscode.languages.setLanguageConfiguration("asm-collection", {brackets});
+    vscode.languages.setLanguageConfiguration("sjasmplus", {brackets});
 }
 
 

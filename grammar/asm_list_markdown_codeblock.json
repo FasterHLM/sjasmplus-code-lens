@@ -3,12 +3,12 @@
   "injectionSelector": "L:text.html.markdown",
   "patterns": [
     {
-      "include": "#asm-list-markdown-codeblock"
+      "include": "#sjasmplus-list-markdown-codeblock"
     }
   ],
   "repository": {
-    "asm-list-markdown-codeblock": {
-      "begin": "(^|\\G)(\\s*)(\\`{3,}|~{3,})\\s*(?i:(list)(\\s+[^`~]*)?$)",
+    "sjasmplus-list-markdown-codeblock": {
+      "begin": "(^|\\G)(\\s*)(\\`{3,}|~{3,})\\s*(?i:(sjasmplus-list|list)(\\s+[^`~]*)?$)",
       "name": "markup.fenced_code.block.markdown",
       "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
       "beginCaptures": {
@@ -31,15 +31,15 @@
         {
           "begin": "(^|\\G)(\\s*)(.*)",
           "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
-          "contentName": "meta.embedded.block.asm.list",
+          "contentName": "meta.embedded.block.sjasmplus.list",
           "patterns": [
             {
-              "include": "source.asm.list"
+              "include": "source.sjasmplus.list"
             }
           ]
         }
       ]
     }
   },
-  "scopeName": "markdown.asm.list.codeblock"
+  "scopeName": "markdown.sjasmplus.list.codeblock"
 }

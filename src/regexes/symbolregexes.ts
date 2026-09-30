@@ -64,7 +64,7 @@ export class SymbolRegexes {
 	 * Note: For list files undefined is returned.
 	 */
 	public static regexMacro(languageId: AllowedLanguageIds): RegExp | undefined {
-		if (languageId === 'asm-list-file')
+		if (languageId === 'sjasmplus-list')
 			return undefined;
 		return /\b(macro)\s+(.*)/i;
 	}

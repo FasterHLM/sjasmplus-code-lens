@@ -19,7 +19,7 @@ export class CompletionRegexes {
 			regexes.push(searchRegex);
 		}
 		// Find all sjasmplus labels without ":" in the document
-		if (cfg.labelsWithoutColons && languageId == 'asm-collection') {
+		if (cfg.labelsWithoutColons && languageId == 'sjasmplus') {
 			const searchRegex2 = this.regexEveryLabelWithoutColonForWord(fuzzySearchWord);
 			regexes.push(searchRegex2);
 		}
@@ -51,14 +51,14 @@ export class CompletionRegexes {
 	 *  1 = preceding characters before 'searchWord'.
 	 * Used by CompletionProposalsProvider.
 	 * @param fuzzySearchWord Is a fuzzy search word, e.g. "\\w*s\\w*n\\w*d" for snd.
-	 * @param languageId either "asm-collection" or "asm-list-file".
+	 * @param languageId either "sjasmplus" or "sjasmplus-list".
 	 * A different regex is returned dependent on languageId.
 	 */
 	protected static regexEveryLabelColonForWord(fuzzySearchWord: string, languageId: AllowedLanguageIds): RegExp {
-		if (languageId === 'asm-list-file') {
+		if (languageId === 'sjasmplus-list') {
 			return new RegExp('^(.*)\\b' + fuzzySearchWord + '[\\w\\.]*:', 'i');
 		}
-		// "asm-collection"
+		// "sjasmplus"
 		return new RegExp('(^@?[\\w\\.]*|^.*\\s@?[\\w\\.]*)\\b' +
 		fuzzySearchWord + '[\\w\\.]*:', 'i');
 	}
@@ -72,14 +72,14 @@ export class CompletionRegexes {
 	 *  1 = preceding characters before 'searchWord'.
 	 * Used by CompletionProposalsProvider.
 	 * @param fuzzySearchWord Is a fuzzy search word, e.g. "\\w*s\\w*n\\w*d" for snd.
-	 * @param languageId either "asm-collection" or "asm-list-file".
+	 * @param languageId either "sjasmplus" or "sjasmplus-list".
 	 * A different regex is returned dependent on languageId.
 	 */
 	public static regexEveryModuleForWord(fuzzySearchWord: string, languageId: AllowedLanguageIds): RegExp {
-		if (languageId == 'asm-list-file') {
+		if (languageId == 'sjasmplus-list') {
 			return new RegExp('^(.*?\\s+(MODULE)\\s+)' + fuzzySearchWord + '[\\w\\.]*', 'i');
 		}
-		// "asm-collection"
+		// "sjasmplus"
 		return new RegExp('^(\\s+(MODULE)\\s+)' + fuzzySearchWord + '[\\w\\.]*', 'i');
 	}
 
@@ -92,14 +92,14 @@ export class CompletionRegexes {
 	 *  1 = preceding characters before 'searchWord'.
 	 * Used by CompletionProposalsProvider.
 	 * @param fuzzySearchWord Is a fuzzy search word, e.g. "\\w*s\\w*n\\w*d" for snd.
-	 * @param languageId either "asm-collection" or "asm-list-file".
+	 * @param languageId either "sjasmplus" or "sjasmplus-list".
 	 * A different regex is returned dependent on languageId.
 	 */
 	public static regexEveryMacroForWord(fuzzySearchWord: string, languageId: AllowedLanguageIds): RegExp {
-		if (languageId == 'asm-list-file') {
+		if (languageId == 'sjasmplus-list') {
 			return new RegExp('^(.*?\\s+(MACRO)\\s+)' + fuzzySearchWord + '[\\w\\._]*', 'i');
 		}
-		// "asm-collection"
+		// "sjasmplus"
 		return new RegExp('^(\\s+(MACRO)\\s+)' + fuzzySearchWord + '[\\w\\._]*', 'i');
 	}
 }

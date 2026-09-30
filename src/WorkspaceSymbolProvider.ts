@@ -82,7 +82,7 @@ export class WorkspaceSymbolProvider implements vscode.WorkspaceSymbolProvider {
      */
     protected async getWsSymbols(config: Config, query: string): Promise<vscode.SymbolInformation[]> {
         // Allow symbols only for asm files (not list files)
-        const languageId: AllowedLanguageIds = 'asm-collection';
+        const languageId: AllowedLanguageIds = 'sjasmplus';
 
         // Prepare search
         const fuzzySearchWord = CommonRegexes.regexPrepareFuzzy(query);

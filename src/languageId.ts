@@ -7,7 +7,7 @@ import {PackageInfo} from './packageinfo';
 /**
  * The known language IDs.
  */
-export type AllowedLanguageIds = 'asm-collection' | 'asm-list-file';
+export type AllowedLanguageIds = 'sjasmplus' | 'sjasmplus-list';
 
 
 /**
@@ -17,11 +17,11 @@ export type AllowedLanguageIds = 'asm-collection' | 'asm-list-file';
 export class LanguageId {
 
 	protected static asmCollectionCache = new FuncCache<string>(10000, () => {
-		return LanguageId._getGlobalIncludeForLanguageId('asm-collection');
+		return LanguageId._getGlobalIncludeForLanguageId('sjasmplus');
 	});
 
 	protected static asmFileListCache = new FuncCache<string>(10000, () => {
-		return LanguageId._getGlobalIncludeForLanguageId('asm-list-file');
+		return LanguageId._getGlobalIncludeForLanguageId('sjasmplus-list');
 	});
 
 
@@ -29,13 +29,13 @@ export class LanguageId {
 	 * The function wraps _getGlobalIncludeForLanguageId to cache it for a little time.
 	 * E.g. for 10 secs.
 	 * As the function is called quite often, this increases the overall performance.
-	 * @parameter languageId Either "asm-collection" or "asm-file-list".
+	 * @parameter languageId Either "sjasmplus" or "sjasmplus-list".
 	 * @returns  E.g. "** /*.{asm, inc, s}"
 	 */
 	public static getGlobalIncludeForLanguageId(languageId: AllowedLanguageIds): string {
-		if (languageId == 'asm-collection')
+		if (languageId == 'sjasmplus')
 			return LanguageId.asmCollectionCache.getData();
-		if (languageId == 'asm-list-file')
+		if (languageId == 'sjasmplus-list')
 			return LanguageId.asmFileListCache.getData();
 		// Should not reach here
 		assert(false, 'languageId = "' + languageId + '" unknown.');
@@ -47,7 +47,7 @@ export class LanguageId {
 	 * Then it adds files from "files.associations" added by the user and
 	 * it removes files that the user assigned otherwise.
 	 * The remaining list is returned as glob.
-	 * @parameter languageId Either "asm-collection" or "asm-file-list".
+	 * @parameter languageId Either "sjasmplus" or "sjasmplus-list".
 	 * @returns  E.g. "** /*.{asm, inc, s}"
 	 */
 	protected static _getGlobalIncludeForLanguageId(languageId: AllowedLanguageIds): string {

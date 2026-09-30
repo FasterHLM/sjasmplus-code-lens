@@ -44,7 +44,7 @@ export class Commands {
      */
     protected static async findLabels(locLabels, cfg: Config, languageId: AllowedLanguageIds): Promise<void> {
         const baseName = path.basename(cfg.wsFolderPath);
-        const typename = (languageId == 'asm-list-file') ? 'list' : 'asm';
+        const typename = (languageId == 'sjasmplus-list') ? 'list' : 'asm';
         output.appendLine("Unreferenced labels for " + typename + " files, " + baseName + ":");
         output.show(true);
 

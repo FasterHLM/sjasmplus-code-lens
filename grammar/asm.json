@@ -1,6 +1,6 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "asm",
+	"name": "sjasmplus",
 	"patterns": [
 		{
 			"include": "#keywords"
@@ -286,5 +286,5 @@
 			]
 		}
 	},
-	"scopeName": "source.asm"
+	"scopeName": "source.sjasmplus"
 }

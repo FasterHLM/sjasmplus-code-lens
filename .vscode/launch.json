@@ -9,6 +9,9 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 //"--disable-extensions",
+                // Both claim .asm files and would compete with this extension.
+                "--disable-extension=maziac.asm-code-lens",
+                "--disable-extension=mborik.z80-macroasm",
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "sourceMaps": true,

@@ -115,7 +115,7 @@ async function getLinesForFile(filePath: string): Promise<string[]> {
  * search for.
  * @param regex The regular expression to search for.
  * @param rootFolder The search is limited to the root / project folder. This needs to contain a trailing '/'.
- * @param languageId Only files with the language ID are grepped. Is either "asm-collection" or "asm-list-file".
+ * @param languageId Only files with the language ID are grepped. Is either "sjasmplus" or "sjasmplus-list".
  * @param globExcludeFiles The glob pattern to use to exclude files.
  * @returns An array of the vscode locations of the found expressions.
  */
@@ -174,7 +174,7 @@ export async function grep(regex: RegExp, rootFolder: string, languageId: Allowe
  * Simply calls 'grep' multiple times.
  * @param regexes Array of regexes.
  * @param rootFolder The search is limited to the root / project folder. This needs to contain a trailing '/'.
- * @param languageId Only files with the language ID are grepped. Is either "asm-collection" or "asm-list-file".
+ * @param languageId Only files with the language ID are grepped. Is either "sjasmplus" or "sjasmplus-list".
  * @param globExcludeFiles The glob pattern to use to exclude files.
  * @return An array with all regex search results.
  */

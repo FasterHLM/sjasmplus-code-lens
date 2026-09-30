@@ -238,7 +238,7 @@ suite('CommonRegexes', () => {
     suite('RegEx 1 capture', () => {
 
         test('regexLabelColon asm', (done) => {
-            const regex = CommonRegexes.regexLabelWithColon("asm-collection");
+            const regex = CommonRegexes.regexLabelWithColon("sjasmplus");
             const insOuts = [
                 // input-line, found-prefix, found-label
                 "label1:", "", "label1",
@@ -270,7 +270,7 @@ suite('CommonRegexes', () => {
 
 
         test('regexLabelColon list', (done) => {
-            const regex = CommonRegexes.regexLabelWithColon("asm-list-file");
+            const regex = CommonRegexes.regexLabelWithColon("sjasmplus-list");
             const insOuts = [
                 // For list file
                 "6017.R11 00 AF     label:", "6017.R11 00 AF     ", "label",
@@ -438,7 +438,7 @@ suite('CommonRegexes', () => {
                 "label", "xlabel.yyy:", false, "",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexLabelColonForWord, insOuts, 'asm-collection');
+            checkResultsSearchWord(CommonRegexes.regexLabelColonForWord, insOuts, 'sjasmplus');
             done();
         });
 
@@ -452,7 +452,7 @@ suite('CommonRegexes', () => {
                 "label", "626++C4D1 FE 10    label:", true, "626++C4D1 FE 10    ",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexLabelColonForWord, insOuts, 'asm-list-file');
+            checkResultsSearchWord(CommonRegexes.regexLabelColonForWord, insOuts, 'sjasmplus-list');
             done();
         });
 
@@ -488,7 +488,7 @@ suite('CommonRegexes', () => {
                 "label", "xxx.label:", false, "",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexLabelWithoutColonForWord, insOuts, 'asm-collection');
+            checkResultsSearchWord(CommonRegexes.regexLabelWithoutColonForWord, insOuts, 'sjasmplus');
             done();
         });
 
@@ -503,7 +503,7 @@ suite('CommonRegexes', () => {
                 "Mm_0123456789", "  module Mm_0123456789;", true, "  module ",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexModuleForWord, insOuts, 'asm-collection');
+            checkResultsSearchWord(CommonRegexes.regexModuleForWord, insOuts, 'sjasmplus');
             done();
         });
 
@@ -517,7 +517,7 @@ suite('CommonRegexes', () => {
                 "m", "626++C4D1 FE 10    module m", true, "626++C4D1 FE 10    module ",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexModuleForWord, insOuts, 'asm-list-file');
+            checkResultsSearchWord(CommonRegexes.regexModuleForWord, insOuts, 'sjasmplus-list');
             done();
         });
 
@@ -532,7 +532,7 @@ suite('CommonRegexes', () => {
                 "Mm_0123456789", "  macro Mm_0123456789;", true, "  macro ",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexMacroForWord, insOuts, 'asm-collection');
+            checkResultsSearchWord(CommonRegexes.regexMacroForWord, insOuts, 'sjasmplus');
             done();
         });
 
@@ -546,7 +546,7 @@ suite('CommonRegexes', () => {
                 "m", "626++C4D1 FE 10    macro m", true, "626++C4D1 FE 10    macro ",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexMacroForWord, insOuts, 'asm-list-file');
+            checkResultsSearchWord(CommonRegexes.regexMacroForWord, insOuts, 'sjasmplus-list');
             done();
         });
 
@@ -574,8 +574,8 @@ suite('CommonRegexes', () => {
                 "main", "# file closed: main.asm", false, "",
             ];
 
-            checkResultsSearchWord(CommonRegexes.regexAnyReferenceForWord, insOuts, 'asm-collection');
-            checkResultsSearchWord(CommonRegexes.regexAnyReferenceForWord, insOuts, 'asm-list-file');
+            checkResultsSearchWord(CommonRegexes.regexAnyReferenceForWord, insOuts, 'sjasmplus');
+            checkResultsSearchWord(CommonRegexes.regexAnyReferenceForWord, insOuts, 'sjasmplus-list');
             done();
         });
     });

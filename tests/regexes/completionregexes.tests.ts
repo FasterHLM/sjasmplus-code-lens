@@ -81,7 +81,7 @@ suite('CompletionRegexes', () => {
                     "label", "@Label:", true, "@",
                 ];
 
-                checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelColonForWord, insOuts, 'asm-collection');
+                checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelColonForWord, insOuts, 'sjasmplus');
                 done();
             });
 
@@ -106,7 +106,7 @@ suite('CompletionRegexes', () => {
                     "label", "626++C4D1 FE 10    @label:", true, "626++C4D1 FE 10    @",
                 ];
 
-                checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelColonForWord, insOuts, 'asm-list-file');
+                checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelColonForWord, insOuts, 'sjasmplus-list');
                 done();
             });
         });
@@ -153,8 +153,8 @@ suite('CompletionRegexes', () => {
                 "label", "LaBeL", true, "",
             ];
 
-            checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelWithoutColonForWord, insOuts, 'asm-collection');
-            checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelWithoutColonForWord, insOuts, 'asm-list-file');
+            checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelWithoutColonForWord, insOuts, 'sjasmplus');
+            checkResultsSearchWord(CompletionRegexesMock.regexEveryLabelWithoutColonForWord, insOuts, 'sjasmplus-list');
             done();
         });
 
@@ -174,7 +174,7 @@ suite('CompletionRegexes', () => {
                 "m", " module a.m", false, "",
             ];
 
-            checkResultsSearchWord(CompletionRegexesMock.regexEveryModuleForWord, insOuts, 'asm-collection');
+            checkResultsSearchWord(CompletionRegexesMock.regexEveryModuleForWord, insOuts, 'sjasmplus');
             done();
         });
 
@@ -189,7 +189,7 @@ suite('CompletionRegexes', () => {
                 "m", "626++C4D1 FE 10    module m", true, "626++C4D1 FE 10    module ",
             ];
 
-            checkResultsSearchWord(CompletionRegexesMock.regexEveryModuleForWord, insOuts, 'asm-list-file');
+            checkResultsSearchWord(CompletionRegexesMock.regexEveryModuleForWord, insOuts, 'sjasmplus-list');
             done();
         });
 
@@ -208,7 +208,7 @@ suite('CompletionRegexes', () => {
                 "m", " macro a.m", false, "",
             ];
 
-            checkResultsSearchWord(CompletionRegexesMock.regexEveryMacroForWord, insOuts, 'asm-collection');
+            checkResultsSearchWord(CompletionRegexesMock.regexEveryMacroForWord, insOuts, 'sjasmplus');
             done();
         });
 
@@ -227,7 +227,7 @@ suite('CompletionRegexes', () => {
                 "m", " macro a.m", false, "",
             ];
 
-            checkResultsSearchWord(CompletionRegexesMock.regexEveryMacroForWord, insOuts, 'asm-list-file');
+            checkResultsSearchWord(CompletionRegexesMock.regexEveryMacroForWord, insOuts, 'sjasmplus-list');
             done();
         });
     });

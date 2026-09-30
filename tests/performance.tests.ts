@@ -195,12 +195,12 @@ suite('Performance', () => {
     suite('regexes', () => {
 
         test('regexLabelColon asm', () => {
-            const speed = compare(CommonRegexes.regexLabelWithColon("asm-collection"), RefRegexes.regexLabelColon(), true, false, BASE_COUNT);
+            const speed = compare(CommonRegexes.regexLabelWithColon("sjasmplus"), RefRegexes.regexLabelColon(), true, false, BASE_COUNT);
             console.log('regexLabelColon asm: ', speed + '% speed');
         });
 
         test('regexLabelColon list', () => {
-            const speed = compare(CommonRegexes.regexLabelWithColon("asm-list-file"), RefRegexes.regexLabelColon(), false, true, BASE_COUNT);
+            const speed = compare(CommonRegexes.regexLabelWithColon("sjasmplus-list"), RefRegexes.regexLabelColon(), false, true, BASE_COUNT);
             console.log('regexLabelColon list: ', speed + '% speed');
         });
 
@@ -231,12 +231,12 @@ suite('Performance', () => {
 
 
         test('regexLabelColonForWord asm', () => {
-            const speed = compare(CommonRegexes.regexLabelColonForWord('pause', 'asm-collection'), RefRegexes.regexLabelColonForWord('pause'), true, false, BASE_COUNT);
+            const speed = compare(CommonRegexes.regexLabelColonForWord('pause', 'sjasmplus'), RefRegexes.regexLabelColonForWord('pause'), true, false, BASE_COUNT);
             console.log('regexLabelColonForWord asm: ', speed + '% speed');
         });
 
         test('regexLabelColonForWord list', () => {
-            const speed = compare(CommonRegexes.regexLabelColonForWord('pause', 'asm-list-file'), RefRegexes.regexLabelColonForWord('pause'), true, false, BASE_COUNT);
+            const speed = compare(CommonRegexes.regexLabelColonForWord('pause', 'sjasmplus-list'), RefRegexes.regexLabelColonForWord('pause'), true, false, BASE_COUNT);
             console.log('regexLabelColonForWord list: ', speed + '% speed');
         });
 
