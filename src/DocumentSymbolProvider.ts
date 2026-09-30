@@ -49,8 +49,10 @@ export class DocumentSymbolProvider implements vscode.DocumentSymbolProvider {
         };
 
         for (const def of defs) {
+            if (def.line > lastLine)
+                continue;   // The index is older than the document
             const selection = new vscode.Range(def.line, def.start, def.line, def.end);
-            const range = new vscode.Range(def.line, 0, def.line, document.lineAt(def.line).text.length);
+            const range = new vscode.Range(def.line, 0, def.line, Math.max(def.end, document.lineAt(def.line).text.length));
             const name = def.kind === 'module' ? def.written : def.written || ' ';
             const detail = this.detail(def);
             const symbol = new vscode.DocumentSymbol(name, detail, symbolKind(def), range, selection);
