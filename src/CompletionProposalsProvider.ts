@@ -11,59 +11,83 @@ import {getCompleteLabel, getNonLocalLabel} from './grepextra';
 /// directives etc.
 const completions = [
     // Z80 registers
-    'a', 'b', 'c', 'd', 'e', 'h', 'l',
+    'a', 'b', 'c', 'd', 'e', 'h', 'l', 'i', 'r',
     'af', 'bc', 'de', 'hl', 'ix', 'iy', 'sp',
     'ixl', 'ixh', 'iyl', 'iyh',
+    'xl', 'lx', 'xh', 'hx', 'yl', 'ly', 'yh', 'hy',
 
     // Z80 instructions
-	'adc',  'add',  'and',  'bit',  'call', 'ccf',  'cp',   'cpd',
-	'cpdr', 'cpi',  'cpir', 'cpl',  'daa',  'dec',  'di',   'ei',
-	'djnz', 'ex',   'exx',  'halt', 'im',   'inc',  'in',   'ind',
-	'indr', 'ini',  'inir', 'jp',   'jr',   'ld',   'ldd',  'lddr',
-	'ldi',  'ldir', 'neg',  'nop',  'or',   'otdr', 'otir', 'out',
-	'outd', 'outi', 'pop',  'push', 'res',  'ret',  'reti', 'retn',
-	'rl',   'rla',  'rlc',  'rlca', 'rld',  'rr',   'rra',  'rrc',
-	'rrca', 'rrd',  'rst',  'sbc',  'scf',  'set',  'sla',  'slia',
-    'sll',  'swap', 'sra',  'srl',  'sub',  'xor',
+    'adc',  'add',  'and',  'bit',  'call', 'ccf',  'cp',   'cpd',
+    'cpdr', 'cpi',  'cpir', 'cpl',  'daa',  'dec',  'di',   'ei',
+    'djnz', 'ex',   'exx',  'halt', 'im',   'inc',  'in',   'ind',
+    'indr', 'ini',  'inir', 'jp',   'jr',   'ld',   'ldd',  'lddr',
+    'ldi',  'ldir', 'neg',  'nop',  'or',   'otdr', 'otir', 'out',
+    'outd', 'outi', 'pop',  'push', 'res',  'ret',  'reti', 'retn',
+    'rl',   'rla',  'rlc',  'rlca', 'rld',  'rr',   'rra',  'rrc',
+    'rrca', 'rrd',  'rst',  'sbc',  'scf',  'set',  'sla',  'sra',
+    'srl',  'sub',  'xor',
 
-    // Z80N instructions
+    // Z80 undocumented instructions
+    'sll', 'sli',
+
+    // sjasmplus instruction alias (ex af,af')
+    'exa',
+
+    // Z80N instructions (--zxnext)
     'ldix', 'ldws', 'ldirx', 'lddx', 'lddrx', 'ldpirx',
     'outinb', 'mul', 'swapnib', 'mirror', 'nextreg',
     'pixeldn', 'pixelad', 'setae', 'test',
     'bsla', 'bsra', 'bsrl', 'bsrf', 'brlc',
 
-    // sjasmplus fake instructions
-    'sli',
+    // CSpect emulator fake instructions (--zxnext=cspect)
+    'break', 'exit', 'setbrk', 'clrbrk',
 
-    // sjasmplus
-    'macro', 'endm', 'module', 'endmodule', 'struct', 'ends', 'dup', 'edup',
-    'if', 'ifn', 'ifdef', 'ifndef', 'ifused', 'ifnused', 'else', 'endif',
-    'include', 'incbin',
+    // sjasmplus pseudo-ops
     'abyte', 'abytec', 'abytez', 'align', 'assert',
-    'binary', 'block', 'defb', 'defd', 'defg', 'defh', 'defl', 'defm', 'defs', 'defw', 'dephase', 'disp', 'phase', 'unphase',
-    'd24', 'db', 'dc', 'dd', 'dg', 'dh', 'hex', 'dm', 'ds', 'dw', 'dz',
-    'display', 'byte', 'word', 'dword',
-    'emptytap', 'emptytrd', 'encoding',
-    'equ', 'export',
-    'end', 'endlua', 'endt', 'ent',
-    'includelua', 'inchob', 'inctrd', 'insert',
-    'lua', 'labelslist', 'org', 'outend', 'output',
-    'memorymap', 'mmu',
-    'page', 'rept', 'endr', 'savebin', 'savedev', 'savehob', 'savesna', 'savetrd',
-    'savetap', 'basic', 'code', 'numbers', 'chars', 'headless',
-    'savenex', 'core', 'cfg', 'cfg3', 'bar', 'palette', 'default', 'mem', 'bmp', 'screen',
-    'l2', 'l2_320', 'l2_640', 'scr', 'shc', 'shr', 'tile', 'cooper', 'bank', 'auto',
-    'shellexec', 'size', 'slot',
-    'tapend', 'tapout',
-    'textarea',
-    'define', 'undefine',
-    'defarray', 'defarray+',
-    'device', 'ZXSPECTRUM48', 'ZXSPECTRUM128', 'ZXSPECTRUM256', 'ZXSPECTRUM512', 'ZXSPECTRUM1024', 'ZXSPECTRUM2048', 'ZXSPECTRUM4096', 'ZXSPECTRUM8192', 'ZXSPECTRUMNEXT', 'NONE', 'ramtop',
-    'open', 'close',
-    'setbp', 'setbreakpoint',
-    'bplist', 'unreal', 'zesarux',
-    'opt', 'cspectmap', 'fpos',
-    '_sjasmplus', '_version', '_release', '_errors', '_warnings'
+    'binary', 'block', 'bplist', 'byte',
+    'cspectmap',
+    'd24', 'db', 'dc', 'dd', 'defarray', 'defarray+', 'defb', 'defd', 'defdevice', 'defg', 'defh',
+    'define', 'define+', 'defl', 'defm', 'defp', 'defs', 'defw', 'dephase', 'device', 'dg', 'dh',
+    'disp', 'display', 'dm', 'dp', 'ds', 'dup', 'dw', 'dword', 'dz',
+    'edup', 'emptytap', 'emptytrd', 'encoding', 'end', 'endlua', 'endm', 'endmod', 'endmodule',
+    'endr', 'ends', 'endt', 'endw', 'ent', 'equ', 'export',
+    'fpos',
+    'hex', 'hexend', 'hexout',
+    'incbin', 'inchob', 'include', 'includelua', 'inctrd', 'insert',
+    'labelslist', 'lua',
+    'macro', 'mmu', 'module',
+    'opt', 'org', 'outend', 'output',
+    'page', 'phase',
+    'relocate_end', 'relocate_start', 'relocate_table', 'rept',
+    'save3dos', 'saveamsdos', 'savebin', 'savecdt', 'savecpcsna', 'savecpr', 'savedev', 'savehex',
+    'savehob', 'savenex', 'savesna', 'savetap', 'savetrd', 'setbp', 'setbreakpoint', 'shellexec',
+    'size', 'sldopt', 'slot', 'struct',
+    'tapend', 'tapout', 'text', 'textarea',
+    'undefine', 'unphase',
+    'while', 'word',
+
+    // sjasmplus conditional assembly
+    'if', 'ifn', 'ifdef', 'ifndef', 'ifused', 'ifnused', 'elseif', 'else', 'endif',
+
+    // Pseudo-op arguments
+    'basic', 'code', 'numbers', 'chars', 'headless', 'full', 'empty',               // SAVETAP, SAVECDT
+    'open', 'core', 'cfg', 'cfg3', 'bar', 'palette', 'screen', 'copper', 'bank', 'auto', 'close',   // SAVENEX
+    'none', 'default', 'mem', 'bmp', 'l2', 'l2_320', 'l2_640', 'lr', 'scr', 'shc', 'tile',   // (and shr)
+    'zxspectrum48', 'zxspectrum128', 'zxspectrum256', 'zxspectrum512', 'zxspectrum1024',      // DEVICE
+    'zxspectrum2048', 'zxspectrum4096', 'zxspectrum8192', 'zxspectrumnext', 'noslot64k',
+    'amstradcpc464', 'amstradcpc6128', 'amstradcpcplus',
+    'unreal', 'zesarux', 'mame', 'fuse',                        // BPLIST
+    'pass1', 'pass2', 'pass3', 'allpass',                       // LUA
+    'reset', 'listoff', 'liston', 'listall', 'listact', 'listmc',   // OPT (and push, pop)
+    'comment', 'swapon', 'swapoff',                             // SLDOPT
+
+    // Expression operators
+    'low', 'high', 'not', 'mod', 'shl', 'shr', 'abs', 'norel', 'exist', 'sizeof', 'pair', 'u16',
+
+    // Predefined defines
+    '__SJASMPLUS__', '__VERSION__', '__ERRORS__', '__WARNINGS__', '__DATE__', '__TIME__', '__PASS__',
+    '__INCLUDE_LEVEL__', '__BASE_FILE__', '__FILE__', '__LINE__', '__COUNTER__',
+    '_SJASMPLUS', '_VERSION', '_RELEASE', '_ERRORS', '_WARNINGS'
 ];
 
 
