@@ -1,10 +1,8 @@
-import {CommonRegexes} from './regexes/commonregexes';
 import * as vscode from 'vscode';
 import {Config} from './config';
-import {getModule, grepMultiple, reduceLocations} from './grep';
-import {CompletionRegexes} from './regexes/completionregexes';
-import {AllowedLanguageIds} from './languageId';
-import {getCompleteLabel, getNonLocalLabel} from './grepextra';
+import {ProjectManager} from './projectmanager';
+import {SymbolDef} from './sjasm/project';
+import {completionKind, keyName, kindText} from './symbols';
 
 
 /// All additional completions like Z80 instructions and assembler
@@ -69,168 +67,82 @@ const completions = [
 
 /**
  * CompletionItemProvider for assembly language.
+ * Proposes the symbols visible at the position (labels relative to the
+ * current module, local labels of the current label, macros, defines)
+ * plus instructions and directives.
  */
 export class CompletionProposalsProvider implements vscode.CompletionItemProvider {
+    constructor(protected projects: ProjectManager) {
+    }
+
+
     /**
      * Called from vscode when the user types characters.
      * @param document The current document.
      * @param position The position of the word for which the references should be found.
      * @param token
      */
-    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList | undefined>> {
-        // Check which workspace
+    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.CompletionList | undefined> {
         const config = Config.getConfigForDoc(document);
-        if (!config?.enableCompletions)
-            return undefined;   // Don't show any completion.
-
-        // Get required length
-        const requiredLen = config.completionsRequiredLength;
-
-        const line = document.lineAt(position).text;
-        const word = getCompleteLabel(line, position.character);
-        //console.log('provideCompletionItems:', label);
-        let len = word.label.length;
-        if (word.label.startsWith('.'))
-            len--; // Require one more character for local labels.
-        if (len < requiredLen)
-            return new vscode.CompletionList([new vscode.CompletionItem(' ')], false);  // A space is required, otherwise vscode will not ask again for completion items.
-
-        // Search proposals:
-
-        // Get all lines
-        const lines = document.getText().split('\n');
-        // Get the module at the line of the searched word.
-        const row = position.line;
-        const moduleLabel = getModule(lines, row);
-
-        // Get the range of the whole input label.
-        // Otherwise vscode takes only the part after the last dot.
-        const lineContents = lines[row];
-        const rowLabel = getCompleteLabel(lineContents, position.character);
-        const start = rowLabel.preString.length;
-        const end = start + rowLabel.label.length;
-        const range = new vscode.Range(new vscode.Position(row, start), new vscode.Position(row, end));
-
-        // Get the first non-local label
-        const languageId = document.languageId as AllowedLanguageIds;
-        const regexLbls = CommonRegexes.regexLabel(config, languageId);
-        let nonLocalLabel;  // Only used for local labels
-        if (rowLabel.label.startsWith('.')) {
-            const result = getNonLocalLabel(regexLbls, lines, row, -1);
-            nonLocalLabel = result.label;
-        }
-
-        // Search
-        const posRange =  document.getWordRangeAtPosition(position);
-        if (!posRange) {
+        if (!config.enableCompletions)
             return undefined;
-        }
-        const searchWord = document.getText(posRange);
-        const fuzzySearchWord = CommonRegexes.regexPrepareFuzzy(searchWord);
 
-        // regexes for labels with and without colon
-        const regexes = CompletionRegexes.regexesEveryLabelForWord(fuzzySearchWord, config, languageId);
-        // Find all sjasmplus MODULEs in the document
-        const searchSjasmModule = CompletionRegexes.regexEveryModuleForWord(fuzzySearchWord, languageId);
-        regexes.push(searchSjasmModule);
-        // Find all sjasmplus MACROs in the document
-        const searchSjasmMacro = CompletionRegexes.regexEveryMacroForWord(fuzzySearchWord, languageId);
-        regexes.push(searchSjasmMacro);
+        // The word left of the cursor, including dots and prefixes
+        const line = document.lineAt(position).text;
+        const before = /[@.!]?[\w.!?#@]*$/.exec(line.substring(0, position.character))![0];
+        const after = /^[\w!?#@]*/.exec(line.substring(position.character))![0];
+        const word = before + after;
+        let len = word.length;
+        if (word.startsWith('.'))
+            len--; // Require one more character for local labels.
+        if (len < config.completionsRequiredLength)
+            return new vscode.CompletionList([], true);    // Ask again when more is typed
+        const range = new vscode.Range(position.line, position.character - before.length, position.line, position.character + after.length);
 
-        const locations = await grepMultiple(regexes, config.wsFolderPath, languageId, config.excludeFiles);
-        // Reduce the found locations.
-        const reducedLocations = await reduceLocations(regexLbls, locations, document.fileName, position, true, false);
-        // Now put all proposal texts in a map. (A map to make sure every item is listed only once.)
+        const project = await this.projects.getProject(document);
+        if (!project)
+            return undefined;
+        const scope = project.scopeAt(document.fileName, position.line);
         const proposals = new Map<string, vscode.CompletionItem>();
-
-        // Go through all found locations
-        for (const loc of reducedLocations) {
-            const text = loc.moduleLabel;
-            if (config.labelsExcludes.includes(text))
-                continue;   // Skip if excluded
-            /*
-            Alternative implementation that only proposes completion up to the next dot:
-            const fullText = loc.moduleLabel;
-            // Reduce text to match number of columns
-            const textArr = fullText.split('.');
-            let text = textArr[0];
-            for (let i = 1; i <= dotCount; i++) {
-                text += '.' + textArr[i];
-            }
-            */
-
-            //console.log('Proposal:', text);
-            const item = new vscode.CompletionItem(text, vscode.CompletionItemKind.Function);
-            item.filterText = text;
+        const add = (text: string, def: SymbolDef) => {
+            if (proposals.has(text))
+                return;
+            const item = new vscode.CompletionItem(text, completionKind(def));
             item.range = range;
+            item.detail = keyName(def.key) + ' — ' + kindText(def.kind);
+            proposals.set(text, item);
+        };
 
-            // Check for local label
-            if (nonLocalLabel) {
-                // A previous non-local label was searched (and found), so label is local.
-                item.filterText = rowLabel.label;
-                // Change insert text
-                let k = moduleLabel.length;
-                if (k > 0)
-                    k++;    // For the dot '.'
-                k += nonLocalLabel.length;
-                let part = text.substring(k);
-                item.insertText = part;
-                // change shown text
-                item.label = part;
-                // And filter text
-                item.filterText = part;
+        for (const def of project.getAllDefinitions()) {
+            if (def.kind === 'temp' || def.kind === 'module' || def.kind === 'macrolocal')
+                continue;
+            const name = keyName(def.key);
+            if (word.startsWith('.')) {
+                // Local labels of the current non-local label
+                if (def.key.startsWith('L:') && name.startsWith(scope.localPrefix + '.'))
+                    add(name.substring(scope.localPrefix.length), def);
+                continue;
             }
-            // Maybe make the label local to current module.
-            else if (text.startsWith(moduleLabel + '.')) {
-                // Change insert text
-                const k = moduleLabel.length + 1;
-                let part = text.substring(k);
-                item.insertText = part;
-                // change shown text
-                item.label = '[' + text.substring(0, k) + '] ' + part;
-            }
-
-            proposals.set(item.label as string, item);
+            // Relative to the current module where possible
+            if (def.key.startsWith('L:') && scope.module && name.startsWith(scope.module + '.'))
+                add(name.substring(scope.module.length + 1), def);
+            add(name, def);
         }
 
-        // Create list from map
-        const propList = Array.from(proposals.values());
-
-
-        // Check if word includes a dot
-        let allCompletions;
-        let k = rowLabel.label.lastIndexOf('.');
-        if (k < 0) {
-            // No dot.
-            // Check if word starts with a capital letter
-            const upperCase = (rowLabel.label[0] === rowLabel.label[0].toUpperCase());  // NOSONAR
-            // Add the instruction proposals
-            let i = 0;
-            allCompletions = completions.map(text => {
-                if (upperCase)
-                    text = text.toUpperCase();
-                const item = new vscode.CompletionItem(text, vscode.CompletionItemKind.Function);
-                item.sortText = i.toString(); // To make sure they are shown at first.
-                i++;
+        // Instructions and directives, in the case the user types
+        if (!word.includes('.') && !word.startsWith('@')) {
+            const upperCase = word.length > 0 && word[0] === word[0].toUpperCase() && word[0] !== word[0].toLowerCase();
+            for (const text of completions) {
+                const keyword = upperCase ? text.toUpperCase() : text;
+                if (proposals.has(keyword))
+                    continue;
+                const item = new vscode.CompletionItem(keyword, vscode.CompletionItemKind.Keyword);
                 item.range = range;
-                return item;
-            });
-            // Add grepped words
-            allCompletions.push(...propList);
-        }
-        else {
-            // Simply use grepped list.
-            allCompletions = propList;
+                proposals.set(keyword, item);
+            }
         }
 
-        // Return.
-        // false: In fact the 'false' means that the list is not incomplete,
-        // i.e. it is complete. vscode will not call completion
-        // anymore if not something bigger chances.
-        // So, in fact only for the first character the completion list
-        // is build. vscode filters this list on its own.
-        const completionList = new vscode.CompletionList(allCompletions, false);
-        return completionList;
+        // Complete: vscode filters the list itself while typing
+        return new vscode.CompletionList([...proposals.values()], false);
     }
-
 }

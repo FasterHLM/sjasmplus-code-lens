@@ -1,10 +1,13 @@
-import {Config} from './config';
-import {AllowedLanguageIds} from './languageId';
-import {CommonRegexes} from './regexes/commonregexes';
 import * as vscode from 'vscode';
-import {grep, reduceLocations} from './grep';
-import {RenameRegexes} from './regexes/renameregexes';
+import {Config} from './config';
+import {ProjectManager} from './projectmanager';
+import {Occurrence, Project} from './sjasm/project';
+import {keyName, keysAt, segments} from './symbols';
 
+
+
+/** Valid new names: no dots (these separate modules and local labels), no leading digit. */
+const regexNewName = /^[A-Za-z_][\w!?#@]*$/;
 
 
 /**
@@ -12,51 +15,115 @@ import {RenameRegexes} from './regexes/renameregexes';
  * User selects "Rename symbol".
  */
 export class RenameProvider implements vscode.RenameProvider {
+    constructor(protected projects: ProjectManager) {
+    }
+
+
+    /**
+     * Checks that a symbol is at the position and returns the part of
+     * the name that is renamed.
+     */
+    public async prepareRename(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<{range: vscode.Range, placeholder: string} | undefined> {
+        const target = await this.getTarget(document, position);
+        const edit = target && this.editRange(target.occurrence, target.key);
+        if (!target || !edit)
+            throw new Error('Nothing to rename here.');
+        const placeholder = keyName(target.key).split('.').pop()!;
+        return {range: new vscode.Range(edit.line, edit.start, edit.line, edit.end), placeholder};
+    }
+
+
     /**
      * Called from vscode if the user selects "Rename symbol".
      * @param document The current document.
-     * @param position The position of the word for which the references should be found.
-     * @param options
-     * @param token
+     * @param position The position of the symbol.
+     * @param newName The new name (last part of the full name).
      */
     public async provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string, _token: vscode.CancellationToken): Promise<vscode.WorkspaceEdit | undefined> {
+        if (!regexNewName.test(newName))
+            throw new Error(`'${newName}' is not a valid name. Use letters, digits and '_' (no dots).`);
+        const target = await this.getTarget(document, position);
+        if (!target)
+            throw new Error('Nothing to rename here.');
+
         const wsEdit = new vscode.WorkspaceEdit();
-        // Check which workspace
-        const config = Config.getConfigForDoc(document);
-        if (!config) {
-            await vscode.window.showWarningMessage("Document is in no workspace folder.");
-            return wsEdit;  // Empty = no change
+        const done = new Set<string>();
+        for (const occ of this.collectOccurrences(target.project, target.key)) {
+            const edit = this.editRange(occ, target.key, target.project);
+            if (!edit)
+                continue;
+            const id = `${occ.file}|${edit.line}|${edit.start}`;
+            if (done.has(id))
+                continue;
+            done.add(id);
+            wsEdit.replace(vscode.Uri.file(occ.file), new vscode.Range(edit.line, edit.start, edit.line, edit.end), newName);
         }
-        if (!config.enableRenaming) {
-            await vscode.window.showWarningMessage("Renaming is disabled for this workspace folder.");
-            return wsEdit;  // Empty = no change
-        }
-
-        // Rename
-        const posRange = document.getWordRangeAtPosition(position);
-        if (!posRange) {
-            return wsEdit;  // Empty = no change
-        }
-        const oldName = document.getText(posRange);
-        const searchRegex = RenameRegexes.regexAnyReferenceForWordGlobal(oldName);
-
-        const languageId = document.languageId as AllowedLanguageIds;
-        const locations = await grep(searchRegex, config.wsFolderPath, languageId, config.excludeFiles);
-        const regexLbls = CommonRegexes.regexLabel(config, languageId);
-        const reducedLocations = await reduceLocations(regexLbls, locations, document.fileName, position, false, true, /\w/);
-
-        // Change to WorkSpaceEdits.
-        // Note: WorkSpaceEdits do work on all (even not opened files) in the workspace.
-        // If a file is not open in the text editor it will remain unopened.
-        // (This was probably different in the past.)
-        // I.e. WorkSpaceEdits can work on all files:
-        // - not opened in text editor
-        // - opened in text editor and saved
-        // - opened in text editor and unsaved. The file in the editor will be saved, but this is normal behavior also e.g. in typescript renaming.
-        for (const loc of reducedLocations) {
-            wsEdit.replace(loc.uri, loc.range, newName);
-        }
-
         return wsEdit;
     }
+
+
+    /** The symbol to rename at the position. */
+    protected async getTarget(document: vscode.TextDocument, position: vscode.Position): Promise<{project: Project, key: string, occurrence: Occurrence} | undefined> {
+        const config = Config.getConfigForDoc(document);
+        if (!config.enableRenaming)
+            throw new Error('Renaming is disabled for this workspace folder.');
+        const project = await this.projects.getProject(document);
+        if (!project)
+            return undefined;
+        for (const {occurrence, keys} of keysAt(project, document.fileName, position)) {
+            const key = keys[0];
+            if (!key)
+                continue;
+            if (key.startsWith('T:'))
+                throw new Error('Temporary labels cannot be renamed.');
+            return {project, key, occurrence};
+        }
+        return undefined;
+    }
+
+
+    /** All occurrences that may contain a part to rename. */
+    protected collectOccurrences(project: Project, key: string): Occurrence[] {
+        // Labels, structs and modules: the name can be part of longer names (locals, fields, qualified references)
+        if (key.startsWith('L:') || key.startsWith('M:'))
+            return project.getAllOccurrences().filter(o => o.key && (o.key.startsWith('L:') || o.key.startsWith('M:')));
+        return project.getAllOccurrences().filter(o => o.key === key);
+    }
+
+
+    /**
+     * Returns the range of the part of an occurrence that belongs to the
+     * renamed symbol, or undefined if the occurrence does not contain it.
+     */
+    protected editRange(occ: Occurrence, key: string, project?: Project): {line: number, start: number, end: number} | undefined {
+        if (!occ.key)
+            return undefined;
+        const segs = segments(occ.written);
+        const last = segs[segs.length - 1];
+        const whole = {line: occ.line, start: occ.start + segs[0].offset, end: occ.start + last.offset + last.text.length};
+
+        const ns = key.substring(0, key.indexOf(':') + 1);
+        if (ns !== 'L:' && ns !== 'M:')
+            return occ.key === key ? {line: occ.line, start: occ.start + prefixOf(occ.written, key), end: occ.end} : undefined;
+
+        // Struct instance fields: the last part is the field name
+        if (project && occ.key !== key && project.getDerivedKeys(key).includes(occ.key))
+            return {line: occ.line, start: occ.start + last.offset, end: whole.end};
+
+        const target = keyName(key).split('.');
+        const full = keyName(occ.key).split('.');
+        if (full.length < target.length || target.some((t, i) => full[i] !== t))
+            return undefined;
+        const index = target.length - 1 - (full.length - segs.length);
+        if (index < 0 || index >= segs.length)
+            return undefined;
+        const seg = segs[index];
+        return {line: occ.line, start: occ.start + seg.offset, end: occ.start + seg.offset + seg.text.length};
+    }
+}
+
+
+/** Length of the prefix of macro locals ('.'), defines and macros (none). */
+function prefixOf(written: string, key: string): number {
+    return key.startsWith('ML:') && written.startsWith('.') ? 1 : 0;
 }

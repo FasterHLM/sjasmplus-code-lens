@@ -150,36 +150,29 @@
                     "type": "boolean",
                     "default": true
                 },
-                "sjasmplus-code-lens.labels.colon": {
-                    "order": 101,
+                "sjasmplus-code-lens.includePaths": {
+                    "order": 105,
                     "scope": "resource",
-                    "markdownDescription": "Determines if labels with or without or both should be recognized.\nPlease note: labels without colons cannot be determined in list files.",
-                    "type": "string",
-                    "enum": [
-                        "Both",
-                        "With colon",
-                        "Without colon"
-                    ],
-                    "enumDescriptions": [
-                        "Labels with and without a trailing colon",
-                        "Only labels with a trailing colon",
-                        "Only labels without a trailing colon"
-                    ],
-                    "default": "Both"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "markdownDescription": "Directories searched for `INCLUDE` files, like the sjasmplus options `-i`/`--inc`. Relative paths are relative to the workspace folder, `${workspaceFolder}` may be used. The workspace folder itself is always searched."
                 },
-                "sjasmplus-code-lens.labels.excludes": {
-                    "order": 102,
+                "sjasmplus-code-lens.dirbol": {
+                    "order": 106,
                     "scope": "resource",
-                    "markdownDescription": "Configure here a comma separated list of words that should not be recognized as labels. E.g. if the extension wrongly interprets an assembler directive as label you can exclude it here. For example `if;then;else;elif;endif`. The exclude is case-insensitive.",
-                    "type": "string",
-                    "default": ""
+                    "type": "boolean",
+                    "default": false,
+                    "markdownDescription": "Recognize directives at the beginning of a line, like the sjasmplus option `--dirbol`."
                 },
                 "sjasmplus-code-lens.excludeFiles": {
                     "order": 111,
                     "scope": "resource",
                     "type": "string",
                     "default": "",
-                    "markdownDescription": "Choose what files or directories to exclude e.g `**/*.{inc,s}`."
+                    "markdownDescription": "Choose what files or directories to exclude, e.g. `**/{old,_archive}/**`."
                 },
                 "sjasmplus-code-lens.hexCalculator.showInExplorer": {
                     "order": 121,
@@ -308,6 +301,7 @@
         "compile": "tsc -p ./",
         "watch-tsc": "tsc -w -p ./",
         "test": "mocha -u tdd ./out/tests/",
+        "test:integration": "tsc -p ./ && npm run esbuild-node && npm run esbuild-browser && node ./out/tests/integration/runTest.js",
         "vscode:prepublish": "npm run esbuild-node -- --minify && npm run esbuild-browser -- --minify",
         "esbuild-node": "esbuild ./src/extension.ts --bundle --outdir=out --external:vscode --format=cjs --platform=node",
         "esbuild-browser": "esbuild ./src/html/hexcalc.ts --bundle --outdir=out/html --platform=browser",
@@ -322,6 +316,7 @@
         "@types/mocha": "10.0.0",
         "@types/node": "^18.8.2",
         "@types/vscode": "^1.71.0",
+        "@vscode/test-electron": "^3.1.0",
         "esbuild": "^0.25.0",
         "mocha": "^10.4.0",
         "source-map-support": "^0.5.21",

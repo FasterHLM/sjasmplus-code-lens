@@ -1,198 +1,111 @@
-import { AllowedLanguageIds } from './languageId';
 import * as vscode from 'vscode';
-import {stripAllComments} from './comments';
 import {Config} from './config';
-import {SymbolRegexes} from './regexes/symbolregexes';
-import {CommonRegexes} from './regexes/commonregexes';
+import {ProjectManager} from './projectmanager';
+import {SymbolDef} from './sjasm/project';
+import {isLocal, keyName, kindText, symbolKind} from './symbols';
 
+
+/** Kinds shown in the outline. */
+const OUTLINE_KINDS = new Set(['label', 'data', 'equ', 'defl', 'struct', 'field', 'macro', 'module', 'define']);
 
 
 /**
- * ReferenceProvider for assembly language.
+ * DocumentSymbolProvider for assembly language (outline view, breadcrumbs).
+ * Modules contain their labels, labels their local labels, structs their fields.
  */
 export class DocumentSymbolProvider implements vscode.DocumentSymbolProvider {
-    /**
-     * Called by vscode to provide symbol information for the given document.
-     * I.e. returns all labels of a document.
-     *
-     * @param document The document in which the command was invoked.
-     * @param token A cancellation token.
-     * @return An array of document highlights or a thenable that resolves to such. The lack of a result can be
-     * signaled by returning `undefined`, `null`, or an empty array.
-     */
-    public provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
-        // Check which workspace
+    constructor(protected projects: ProjectManager) {
+    }
+
+
+    public async provideDocumentSymbols(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.DocumentSymbol[] | undefined> {
         const config = Config.getConfigForDoc(document);
-        if (!config?.enableOutlineView)
-            return undefined;   // Don't provide any outline
+        if (!config.enableOutlineView)
+            return undefined;
+        const project = await this.projects.getProject(document);
+        if (!project)
+            return undefined;
 
-        // Loops through the whole document line by line and
-        // extracts the labels.
-        // Determines for each label if it is code-label,
-        // a code-relative-label, an const-label (EQU) or a
-        // data-label and creates symbols for each.
-        // Those symbols are returned.
-        const languageId = document.languageId as AllowedLanguageIds;
-        let symbols: vscode.DocumentSymbol[] = [];
-        const regexLabel = CommonRegexes.regexLabel(config, languageId);
+        const defs = project.getDefinitionsInFile(document.fileName)
+            .filter(d => OUTLINE_KINDS.has(d.kind))
+            .sort((a, b) => a.line - b.line || a.start - b.start);
 
-        const regexModule = SymbolRegexes.regexModuleLabel();
-        const regexStruct = SymbolRegexes.regexStructLabel();
-        //const regexNotLabels = /^(include|if|endif|else|elif)$/i;
-        const excludes = ['include', ...config.labelsExcludes];
-        const regexConst = SymbolRegexes.regexConst();
-        const regexData = SymbolRegexes.regexData();
-        const regexMacro = SymbolRegexes.regexMacro(languageId);
-        let lastSymbol;
-        let lastSymbols = new Array<vscode.DocumentSymbol>();
-        let lastAbsSymbolChildren;
-        let lastModules = new Array<vscode.DocumentSymbol>();
+        const lastLine = Math.max(0, document.lineCount - 1);
+        const roots: vscode.DocumentSymbol[] = [];
+        // Open containers: modules (with their full name), the last non-local label, the current struct
+        const modules: {name: string, symbol: vscode.DocumentSymbol}[] = [];
+        let lastLabel: vscode.DocumentSymbol | undefined;
+        let struct: {def: SymbolDef, symbol: vscode.DocumentSymbol} | undefined;
+        // Symbols whose range still has to be closed at the next sibling
+        const open: vscode.DocumentSymbol[] = [];
 
-        // Strip all comments
-        const lines = document.getText().split('\n');
-        stripAllComments(lines);
+        const add = (parent: vscode.DocumentSymbol | undefined, symbol: vscode.DocumentSymbol) => {
+            (parent ? parent.children : roots).push(symbol);
+        };
+        const container = (module: string) => {
+            while (modules.length > 0 && module !== modules[modules.length - 1].name && !module.startsWith(modules[modules.length - 1].name + '.'))
+                modules.pop();
+            return modules[modules.length - 1]?.symbol;
+        };
 
-        // Go through all lines
-        const len = lines.length;
-        for (let line = 0; line < len; line++) {
-            let lineContents = lines[line];
+        for (const def of defs) {
+            const selection = new vscode.Range(def.line, def.start, def.line, def.end);
+            const range = new vscode.Range(def.line, 0, def.line, document.lineAt(def.line).text.length);
+            const name = def.kind === 'module' ? def.written : def.written || ' ';
+            const detail = this.detail(def);
+            const symbol = new vscode.DocumentSymbol(name, detail, symbolKind(def), range, selection);
 
-            const match = regexLabel.exec(lineContents);
-            if (match) {
-                // It is a label or module (or both)
-                const labelPlus = match[0].trimEnd(); // Label plus e.g. ': '
-                const label = match[1] + match[2]; // Label without ':'
-
-                // Check that label is not excluded
-                if (!excludes.includes(label)) {
-                    // Check for label
-                    // Create range
-                    const range = new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER);
-                    const selRange = range; //new vscode.Range(line, 0, line, 3);
-
-                    // Create Symbol
-                    lastSymbol = new vscode.DocumentSymbol(label, '', vscode.SymbolKind.Function, range, selRange);
-                    lastSymbols.push(lastSymbol);
-
-                    // Insert as absolute or relative label
-                    if (label.startsWith('.')) {
-                        // Relative label
-                        lastAbsSymbolChildren?.push(lastSymbol);
-                    }
-                    else if (label.startsWith('@')) {
-                        // Absolute label ignoring MODULE
-                        symbols.push(lastSymbol);
-                    }
-                    else {
-                        // Absolute label
-                        // Add to children of last module
-                        const len = lastModules.length;
-                        if (len > 0) {
-                            const lastModule = lastModules[len - 1];
-                            lastModule.children.push(lastSymbol);
-                        }
-                        else {
-                            symbols.push(lastSymbol);
-                        }
-                        lastAbsSymbolChildren = lastSymbol.children;
-                    }
-
-                    // Remove label from line contents.
-                    const len = labelPlus.length;
-                    lineContents = lineContents.substring(len);
-                    // Add a whitespace to recognize a directly following MODULE
-                    lineContents += ' ';
-                }
+            if (def.kind === 'module') {
+                add(container(def.module.substring(0, Math.max(0, def.module.lastIndexOf('.')))), symbol);
+                modules.push({name: def.module, symbol});
+                lastLabel = undefined;
+                struct = undefined;
+                continue;
             }
-
-            // Check for MACRO
-            if (regexMacro) {
-                const matchMacro = regexMacro.exec(lineContents);
-                if (matchMacro) {
-                    let macroName = matchMacro[2];
-                    if (macroName === '')
-                        macroName = ' ';    // Otherwise vscode.DocumentSymbol "crashes".
-                    const range = new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER);
-                    const macroSymbol = new vscode.DocumentSymbol(macroName, 'macro', vscode.SymbolKind.Interface, range, range);
-                    symbols.push(macroSymbol);
-                    continue;
-                }
+            if (def.kind === 'field' && struct && def.name.startsWith(struct.def.name + '.')) {
+                struct.symbol.children.push(symbol);
+                continue;
             }
-
-            // Now check for MODULE or STRUCT
-            let matchModule = regexModule.exec(lineContents);
-            if (!matchModule)
-                matchModule = regexStruct.exec(lineContents);
-            if (matchModule) {
-                const keyword = matchModule[1].toLowerCase();
-                const moduleName = matchModule[2];
-                if (moduleName) {
-                    // Handle MODULE
-                    // Create range
-                    const range = new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER);
-                    // Create symbol
-                    const kind = (keyword.startsWith("module")) ? vscode.SymbolKind.Module : vscode.SymbolKind.Struct;
-                    const moduleSymbol = new vscode.DocumentSymbol(moduleName, '', kind, range, range);
-                    // Add to children of last module
-                    const len = lastModules.length;
-                    if (len > 0) {
-                        const lastModule = lastModules[len - 1];
-                        lastModule.children.push(moduleSymbol);
-                    }
-                    else {
-                        symbols.push(moduleSymbol);
-                    }
-                    lastModules.push(moduleSymbol);
-                }
-
-                // Check for ENDMODULE
-                if (keyword == "endmodule" || keyword == "ends") {
-                    // Handle ENDMODULE
-                    lastModules.pop();
-                    lastAbsSymbolChildren = undefined;
-                }
-
-                lastSymbol = undefined;
-                lastSymbols.length = 0;
+            if (isLocal(def) && lastLabel) {
+                lastLabel.children.push(symbol);
                 continue;
             }
 
-            // Trim
-            lineContents = lineContents.trim();
-            // Now check which kind of data it is:
-            // code, const or data
-            if (lastSymbol) {
-                if (lineContents) {
-                    let kind;
-                    // Check for EQU
-                    let match = regexConst.exec(lineContents);
-                    if (match) {
-                        // It's const data, e.g. EQU
-                        kind = vscode.SymbolKind.Constant
-                    }
-                    else {
-                        // Check for data
-                        match = regexData.exec(lineContents);
-                        if (match) {
-                            // It's data data, e.g. defb
-                            kind = vscode.SymbolKind.Field;
-                        }
-                    }
-                    // Check if found
-                    if (kind != undefined) {
-                        // It's something else than code
-                        for (const elem of lastSymbols) {
-                            elem.kind = kind;
-                            elem.detail = match![1] + ' ' + match![2].trimEnd();
-                        }
-                    }
-
-                    lastSymbol = undefined;
-                    lastSymbols.length = 0;
-                    continue;
-                }
+            // Top level of the current module: close the previous symbols
+            for (const s of open.splice(0))
+                s.range = new vscode.Range(s.range.start, new vscode.Position(Math.max(s.range.start.line, def.line - 1), 0));
+            add(container(def.module), symbol);
+            open.push(symbol);
+            if (def.kind === 'struct') {
+                struct = {def, symbol};
+                lastLabel = symbol;
+            }
+            else if (def.kind !== 'macro' && def.kind !== 'define') {
+                struct = undefined;
+                if (!def.written.startsWith('!'))
+                    lastLabel = symbol;
             }
         }
-        return symbols;
+        for (const s of open)
+            s.range = new vscode.Range(s.range.start, new vscode.Position(lastLine, 0));
+
+        // A parent range must contain its children
+        const fix = (symbols: vscode.DocumentSymbol[]) => {
+            for (const s of symbols) {
+                fix(s.children);
+                for (const c of s.children)
+                    s.range = s.range.union(c.range);
+            }
+        };
+        fix(roots);
+        return roots;
+    }
+
+
+    protected detail(def: SymbolDef): string {
+        const full = keyName(def.key);
+        if (def.kind === 'module' || def.kind === 'macro' || def.kind === 'define')
+            return kindText(def.kind);
+        return full !== def.written ? full : '';
     }
 }

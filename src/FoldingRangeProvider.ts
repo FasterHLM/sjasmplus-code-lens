@@ -1,9 +1,28 @@
 import * as vscode from 'vscode';
 import {Config} from './config';
-import {CommonRegexes} from './regexes/commonregexes';
-import {FoldingRegexes} from './regexes/foldingregexes';
-import {stripAllComments} from './comments';
+import {parseText, ParsedLine} from './sjasm/parser';
 
+
+
+/** Block directives and their end directives. */
+const BLOCK_ENDS: {[start: string]: string[]} = {
+	module: ['endmodule', 'endmod'],
+	struct: ['ends'],
+	macro: ['endm'],
+	dup: ['edup', 'endr'],
+	rept: ['edup', 'endr'],
+	while: ['endw'],
+	if: ['endif'],
+	ifn: ['endif'],
+	ifdef: ['endif'],
+	ifndef: ['endif'],
+	ifused: ['endif'],
+	ifnused: ['endif'],
+	lua: ['endlua']
+};
+
+/** Directives that end the region of a label. */
+const LABEL_REGION_BREAKS = new Set(['module', 'endmodule', 'endmod', 'struct', 'ends', 'macro', 'endm']);
 
 
 /** The folding Provider.
@@ -11,146 +30,107 @@ import {stripAllComments} from './comments';
  */
 export class FoldingProvider implements vscode.FoldingRangeProvider {
 
-	/** Returns a list of folding ranges or null and undefined if the provider
-	 * does not want to participate or was cancelled.
-	 * Is available only for asm files, not list files.
-	 * Note: It seems that the folding range provider is called 3 times with the
-	 * same document for every document change.
+	/** Returns a list of folding ranges:
+	 * - blocks (MODULE, STRUCT, MACRO, DUP, IF..., LUA),
+	 * - labels up to the next label,
+	 * - comment blocks.
 	 * @param document The document in which the command was invoked.
 	 * @param context Additional context information (for future use)
 	 * @param token A cancellation token.
 	 */
 	provideFoldingRanges(document: vscode.TextDocument, _context: vscode.FoldingContext, _token: vscode.CancellationToken): vscode.ProviderResult<vscode.FoldingRange[]> {
-		// Check which workspace
 		const config = Config.getConfigForDoc(document);
-		//console.log("folding:", config?.enableFolding, document.uri.fsPath);
-		if (!config?.enableFolding)
-			return [];   // Don't show any hover.
+		if (!config.enableFolding)
+			return [];
 
-		// Read doc
-		const linesData = document.getText();
-		const lines = linesData.split('\n');
-		const foldingRanges: vscode.FoldingRange[] = [];
+		const {lines, parsed} = parseText(document.getText());
+		const ranges: vscode.FoldingRange[] = [];
+		const add = (start: number, end: number, kind?: vscode.FoldingRangeKind) => {
+			if (end > start)
+				ranges.push(new vscode.FoldingRange(start, end, kind));
+		};
 
-		// Prepare regexes
-		const regexLabel = CommonRegexes.regexLabel(config, 'sjasmplus');
-		const regexCommentMultipleStart = FoldingRegexes.regexCommentMultipleStart();
-		const regexCommentMultipleEnd = FoldingRegexes.regexCommentMultipleEnd();
-		const regexCommentSingle = FoldingRegexes.regexCommentSingleLine(Config.globalToggleCommentPrefix);
-
-		// State base parsing
-		let rangeLineNrStart = -1;
-		let state: string | undefined;
-		const len = lines.length;
-		for (let lineNr = 0; lineNr < len; lineNr++) {
-			const line = lines[lineNr];
-
-			switch (state) {
-				case '/*':
-					// Check for multiline comment end.
-					if (regexCommentMultipleEnd.exec(line)) {
-						this.addRange(foldingRanges, rangeLineNrStart, lineNr, vscode.FoldingRangeKind.Comment);
-						state = undefined;
+		// Blocks
+		const stack: {op: string, line: number}[] = [];
+		parsed.forEach((pl, line) => {
+			for (const st of pl.statements) {
+				const op = st.opLower;
+				if (BLOCK_ENDS[op])
+					stack.push({op, line});
+				else {
+					const i = findLastIndex(stack, b => BLOCK_ENDS[b.op].includes(op));
+					if (i >= 0) {
+						add(stack[i].line, line, vscode.FoldingRangeKind.Region);
+						stack.splice(i);
 					}
-					break;
-
-				case ';':
-					// Check for single comment end.
-					if (!regexCommentSingle.exec(line)) {
-						lineNr--;	// Recheck line
-						this.addRange(foldingRanges, rangeLineNrStart, lineNr, vscode.FoldingRangeKind.Comment);
-						state = undefined;
-					}
-					break;
-
-				case 'label':
-				default: {
-					// Find label, comment etc.
-					let nextState: string | undefined;
-					if (regexLabel.exec(line))
-						nextState = 'label';
-					else if (regexCommentSingle.exec(line))
-						nextState = ';';
-					else if (regexCommentMultipleStart.exec(line))
-						nextState = '/*';
-					if (nextState) {
-						// Check if a previous range ends
-						if (state === 'label') {
-							this.addRange(foldingRanges, rangeLineNrStart, lineNr - 1, vscode.FoldingRangeKind.Region);
-						}
-						// Start a new folding marker
-						rangeLineNrStart = lineNr;
-						state = nextState;
-					}
-					break;
 				}
 			}
-		}
+		});
 
-		// Close last range
-		if(state) {
-			const kind = (state === 'label') ? vscode.FoldingRangeKind.Region : vscode.FoldingRangeKind.Comment;
-			this.addRange(foldingRanges, rangeLineNrStart, len - 1, kind);
-		}
-
-		// Now add overarching regions (modules, structs, macros)
-		stripAllComments(lines);
-
-		// Add ranges for MODULEs
-		this.addRangesForRegex(lines, foldingRanges, FoldingRegexes.regexModuleStart(), FoldingRegexes.regexModuleEnd());
-
-		// Add ranges for STRUCTs
-		this.addRangesForRegex(lines, foldingRanges, FoldingRegexes.regexStructStart(), FoldingRegexes.regexStructEnd());
-
-		// Add ranges for MACROs
-		this.addRangesForRegex(lines, foldingRanges, FoldingRegexes.regexMacroStart(), FoldingRegexes.regexMacroEnd());
-
-		return foldingRanges;
-	}
-
-
-	/** Adds a new range if lineEnd is bigger than lineStart.
-	 * @param foldingRanges An array of already known folding ranges, the new range is added to it.
-	 * @param lineStart The range start.
-	 * @param lineEnd The range end.
-	 * @param kind 'Comment' or 'Region'.
-	 */
-	protected addRange(foldingRanges: vscode.FoldingRange[], lineStart: number, lineEnd: number, kind: vscode.FoldingRangeKind) {
-		if (lineEnd > lineStart) {
-			const range = new vscode.FoldingRange(lineStart, lineEnd, kind);
-			foldingRanges.push(range);
-		}
-	}
-
-
-	/** Adds overarching ranges, e.g. for MODULE/ENDMODULE, STRUCT/ENDS and MACRO/ENDM.
-	 * @param lines The text lines to search (comments have been stripped already)
-	 * @param foldingRanges An array of already known folding ranges, the new ranges are added to it.
-	 * @param regexStart E.g. /..MODULE.../
-	 * @param regexEnd E.g. /..ENDMODULE.../
-	 */
-	protected addRangesForRegex(lines: string[], foldingRanges: vscode.FoldingRange[], regexStart: RegExp, regexEnd: RegExp) {
-		let ranges: vscode.FoldingRange[] = [];
-		let lineNr = -1;
-		const lastLineNr = lines.length - 1;
-		for (const line of lines) {
-			lineNr++;
-			// Check for range start
-			if (regexStart.exec(line)) {
-				// Create range object
-				const range = new vscode.FoldingRange(lineNr, lastLineNr, vscode.FoldingRangeKind.Region);
-				ranges.push(range)
-				// Add already
-				foldingRanges.push(range);
+		// Labels: a non-local label up to the next non-local label, a local label up to the next label
+		const isBlank = (pl: ParsedLine) => !pl.label && pl.statements.length === 0;
+		const endBefore = (from: number, to: number) => {
+			let end = to - 1;
+			while (end > from && isBlank(parsed[end]))
+				end--;
+			return end;
+		};
+		let mainStart = -1;
+		let localStart = -1;
+		const closeLocal = (line: number) => {
+			if (localStart >= 0)
+				add(localStart, endBefore(localStart, line));
+			localStart = -1;
+		};
+		const closeMain = (line: number) => {
+			closeLocal(line);
+			if (mainStart >= 0)
+				add(mainStart, endBefore(mainStart, line));
+			mainStart = -1;
+		};
+		parsed.forEach((pl, line) => {
+			if (pl.statements.some(s => LABEL_REGION_BREAKS.has(s.opLower))) {
+				closeMain(line);
+				return;
 			}
-			// Check for range end
-			else if (regexEnd.exec(line)) {
-				const range = ranges.pop();
-				if (range) {
-					range.end = lineNr;
-				}
+			const label = pl.label?.text;
+			if (!label || /^\d/.test(label))
+				return;
+			if (label.startsWith('.') || label.startsWith('@.')) {
+				closeLocal(line);
+				localStart = line;
 			}
-		}
-	}
+			else {
+				closeMain(line);
+				mainStart = line;
+			}
+		});
+		closeMain(parsed.length);
 
+		// Comments: consecutive comment-only lines and block comments
+		let commentStart = -1;
+		parsed.forEach((pl, line) => {
+			const commentOnly = pl.inBlockComment || (isBlank(pl) && (pl.commentStart !== undefined || /^\s*\/\*/.test(lines[line])));
+			if (commentOnly) {
+				if (commentStart < 0)
+					commentStart = line;
+			}
+			else if (commentStart >= 0) {
+				add(commentStart, line - 1, vscode.FoldingRangeKind.Comment);
+				commentStart = -1;
+			}
+		});
+		if (commentStart >= 0)
+			add(commentStart, parsed.length - 1, vscode.FoldingRangeKind.Comment);
+
+		return ranges;
+	}
+}
+
+
+function findLastIndex<T>(list: T[], predicate: (t: T) => boolean): number {
+	for (let i = list.length - 1; i >= 0; i--)
+		if (predicate(list[i]))
+			return i;
+	return -1;
 }

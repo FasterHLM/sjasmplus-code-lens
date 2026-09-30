@@ -12,6 +12,7 @@
         "preserveConstEnums": true,
         "strictNullChecks": true,
         "noUnusedParameters": false,
-        "allowJs": true
+        "allowJs": true,
+        "skipLibCheck": true
     }
 }

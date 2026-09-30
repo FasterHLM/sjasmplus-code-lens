@@ -13,6 +13,7 @@ import {PackageInfo} from './packageinfo';
 import {Config} from './config';
 import {WorkspaceSymbolProvider} from './WorkspaceSymbolProvider';
 import {FoldingProvider} from './FoldingRangeProvider';
+import {LISTING_LANGUAGE, ProjectManager, SOURCE_LANGUAGE} from './projectmanager';
 
 
 
@@ -20,6 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Init package info
     PackageInfo.Init(context);
+
+    // The symbol index of all sjasmplus projects
+    projects = new ProjectManager();
+    context.subscriptions.push(projects);
 
     // Register the hex calculator webviews
     hexCalcExplorerProvider = new HexCalcProvider();
@@ -49,23 +54,13 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     // Register commands.
-    vscode.commands.registerCommand('sjasmplus-code-lens.find-labels-with-no-reference', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('sjasmplus-code-lens.find-labels-with-no-reference', async () => {
         // Get current text editor to get current project/root folder.
-        const editor = vscode.window.activeTextEditor;
-        const doc = editor?.document;
-        if (!doc)
+        const doc = vscode.window.activeTextEditor?.document;
+        if (doc?.languageId !== SOURCE_LANGUAGE && doc?.languageId !== LISTING_LANGUAGE)
             return;
-        const languageId = doc.languageId;
-        if (languageId != 'sjasmplus' && languageId != 'sjasmplus-list')
-            return;
-        // Check which workspace
-        const config = Config.getConfigForDoc(doc);
-        if (!config)
-            return;
-
-        // Found. Find labels
-        await Commands.findLabelsWithNoReference(config, languageId);
-    });
+        await Commands.findLabelsWithNoReference(projects, doc);
+    }));
 }
 
 
@@ -88,6 +83,9 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
             if (hexCalcDebugProvider)
                 hexCalcDebugProvider.setMainHtml();
         }
+        // Re-registering the providers would drop requests in flight, only do it for own settings
+        if (!event.affectsConfiguration(PackageInfo.extension.packageJSON.name))
+            return;
     }
 
     // Dispose (remove, deregister) all providers
@@ -106,67 +104,67 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
 
     // Both "languages": asm files and list files.
     const asmListFiles: vscode.DocumentSelector = [
-        {scheme: "file", language: 'sjasmplus'},
-        {scheme: "file", language: 'sjasmplus-list'}
+        {scheme: "file", language: SOURCE_LANGUAGE},
+        {scheme: "file", language: LISTING_LANGUAGE}
     ];
 
     // Multiroot: One provider for all workspace folders:
 
     // Register
     if (Config.globalEnableCodeLenses) {
-        const codeLensProvider = new CodeLensProvider();
+        const codeLensProvider = new CodeLensProvider(projects);
         regCodeLensProvider = vscode.languages.registerCodeLensProvider(asmListFiles, codeLensProvider);
         context.subscriptions.push(regCodeLensProvider);
     }
 
     // Register
     if (Config.globalEnableHovering) {
-        regHoverProvider = vscode.languages.registerHoverProvider(asmListFiles, new HoverProvider());
+        regHoverProvider = vscode.languages.registerHoverProvider(asmListFiles, new HoverProvider(projects));
         context.subscriptions.push(regHoverProvider);
     }
 
     // Register
     if (Config.globalEnableCompletions) {
-        regCompletionProposalsProvider = vscode.languages.registerCompletionItemProvider(asmListFiles, new CompletionProposalsProvider());
+        regCompletionProposalsProvider = vscode.languages.registerCompletionItemProvider(asmListFiles, new CompletionProposalsProvider(projects));
         context.subscriptions.push(regCompletionProposalsProvider);
     }
 
     // Register
     if (Config.globalEnableGotoDefinition) {
-        regDefinitionProvider = vscode.languages.registerDefinitionProvider(asmListFiles, new DefinitionProvider());
+        regDefinitionProvider = vscode.languages.registerDefinitionProvider(asmListFiles, new DefinitionProvider(projects));
         context.subscriptions.push(regDefinitionProvider);
     }
 
     // Register
     if (Config.globalEnableFindAllReferences) {
-        regReferenceProvider = vscode.languages.registerReferenceProvider(asmListFiles, new ReferenceProvider());
+        regReferenceProvider = vscode.languages.registerReferenceProvider(asmListFiles, new ReferenceProvider(projects));
         context.subscriptions.push(regReferenceProvider);
     }
 
     // Register
     if (Config.globalEnableRenaming) {
-        regRenameProvider = vscode.languages.registerRenameProvider(asmListFiles, new RenameProvider());
+        regRenameProvider = vscode.languages.registerRenameProvider(asmListFiles, new RenameProvider(projects));
         context.subscriptions.push(regRenameProvider);
     }
 
     // Register
     if (Config.globalEnableOutlineView) {
-        regDocumentSymbolProvider = vscode.languages.registerDocumentSymbolProvider(asmListFiles, new DocumentSymbolProvider());
+        regDocumentSymbolProvider = vscode.languages.registerDocumentSymbolProvider(asmListFiles, new DocumentSymbolProvider(projects));
         context.subscriptions.push(regDocumentSymbolProvider);
     }
 
     // Register
     if (Config.globalEnableWorkspaceSymbols) {
-        regWorkspaceSymbolProvider = vscode.languages.registerWorkspaceSymbolProvider(new WorkspaceSymbolProvider());
+        regWorkspaceSymbolProvider = vscode.languages.registerWorkspaceSymbolProvider(new WorkspaceSymbolProvider(projects));
         context.subscriptions.push(regWorkspaceSymbolProvider);
     }
 
     // Register (always, even if disabled)
-    regFoldingProvider = vscode.languages.registerFoldingRangeProvider({scheme: "file", language: 'sjasmplus'}, new FoldingProvider());
-        context.subscriptions.push(regFoldingProvider);
+    regFoldingProvider = vscode.languages.registerFoldingRangeProvider({scheme: "file", language: SOURCE_LANGUAGE}, new FoldingProvider());
+    context.subscriptions.push(regFoldingProvider);
 
     // Toggle line Comment configuration
-    vscode.languages.setLanguageConfiguration("sjasmplus", {comments: {lineComment: Config.globalToggleCommentPrefix, blockComment: ["/*", "*/"]}});
+    vscode.languages.setLanguageConfiguration(SOURCE_LANGUAGE, {comments: {lineComment: Config.globalToggleCommentPrefix, blockComment: ["/*", "*/"]}});
     // Store
     setCustomCommentPrefix(Config.globalToggleCommentPrefix);
 
@@ -178,7 +176,7 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
     ];
     if (Config.globalEnablePushPopMatching)
         brackets.push(["push", "pop"]);
-    vscode.languages.setLanguageConfiguration("sjasmplus", {brackets});
+    vscode.languages.setLanguageConfiguration(SOURCE_LANGUAGE, {brackets});
 }
 
 
@@ -190,11 +188,13 @@ function removeProvider(pv: vscode.Disposable|undefined, context: vscode.Extensi
     if (pv) {
         pv.dispose();
         const i = context.subscriptions.indexOf(pv);
-        context.subscriptions.splice(i, 1);
+        if (i >= 0)
+            context.subscriptions.splice(i, 1);
     }
 }
 
 
+let projects: ProjectManager;
 let hexCalcExplorerProvider;
 let hexCalcDebugProvider;
 let regCodeLensProvider: vscode.Disposable;

@@ -1,98 +1,86 @@
 import * as vscode from 'vscode';
-import {AllowedLanguageIds} from './languageId';
-import {CommonRegexes} from './regexes/commonregexes';
-import {grepMultiple, reduceLocations} from './grep';
+import * as path from 'path';
 import {Config} from './config';
 import {readCommentsForLine} from './comments';
-import {getCompleteLabel} from './grepextra';
+import {ProjectManager} from './projectmanager';
+import {keyName, keysAt, kindText} from './symbols';
+import {Project, SymbolDef} from './sjasm/project';
 
 
 /**
  * HoverProvider for assembly language.
+ * Shows the definition line, the comments above it and the full name.
  */
 export class HoverProvider implements vscode.HoverProvider {
+    constructor(protected projects: ProjectManager) {
+    }
+
+
     /**
      * Called from vscode if the user hovers over a word.
      * @param document The current document.
-     * @param position The position of the word for which the references should be found.
-     * @param options
+     * @param position The position of the word.
      * @param token
      */
     public async provideHover(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
-        // Check which workspace
         const config = Config.getConfigForDoc(document);
-        if (!config?.enableHovering)
-            return undefined;   // Don't show any hover.
-
-        // Search the word:
-
-        // Check for local label
-        const regexEnd = /\w/;
-        const lineContents = document.lineAt(position.line).text;
-        const {label} = getCompleteLabel(lineContents, position.character, regexEnd);
-        //console.log("provideHover", this.rootFolder, document.uri.fsPath, "'" + label + "'");
-        if (label.startsWith('.')) {
-            return new vscode.Hover('');
-        }
-
-        // It is a non local label
-        const languageId = document.languageId as AllowedLanguageIds;
-        const range = document.getWordRangeAtPosition(position);
-        if (!range) {
-            //console.log("provideHover", position);
+        if (!config.enableHovering)
             return undefined;
-        }
+        const project = await this.projects.getProject(document);
+        if (!project)
+            return undefined;
 
-        const searchWord = document.getText(range);
-        // regexes for labels with and without colon
-        const regexes = CommonRegexes.regexesLabelForWord(searchWord, config, languageId);
-        // Find all sjasmplus MODULEs in the document
-        const searchSjasmModule = CommonRegexes.regexModuleForWord(searchWord);
-        regexes.push(searchSjasmModule);
-        // Find all sjasmplus MACROs in the document
-        const searchSjasmMacro = CommonRegexes.regexMacroForWord(searchWord);
-        regexes.push(searchSjasmMacro);
+        const include = project.includeAt(document.fileName, position.line, position.character);
+        if (include)
+            return new vscode.Hover(include.target ?? 'File not found.');
 
-        const locations = await grepMultiple(regexes, config.wsFolderPath, languageId, config.excludeFiles);
-        // Reduce the found locations.
-        const regexLbls = CommonRegexes.regexLabel(config, languageId);
-        const reducedLocations = await reduceLocations(regexLbls, locations, document.fileName, position, false, true, regexEnd);
-
-        // Now read the comment lines above the document.
-        // Normally there is only one but e.g. if there are 2 modules with the same name there could be more.
-        const hoverTexts = new Array<vscode.MarkdownString>();
-        // Check for end
-        for (const loc of reducedLocations) {
-            // Check if included in exclusion list
-            const name = loc.moduleLabel;
-            if (config.labelsExcludes.includes(name))
-                continue;
-            // Get comments
-            const lineNr = loc.range.start.line;
-            const filePath = loc.uri.fsPath;
-            const doc = await vscode.workspace.openTextDocument(filePath);
-            const linesData = doc.getText();
-            const lines = linesData.split('\n');
-
-            // Now find all comments above the found line
-            const foundTexts = readCommentsForLine(lines, lineNr);
-            if (foundTexts.length > 0) {
-                // Separate several found texts
-                if (hoverTexts.length > 0)
-                    hoverTexts.push(new vscode.MarkdownString('============'));
-                // Add text
-                hoverTexts.push(...foundTexts.map(line => new vscode.MarkdownString(line)));
+        const texts: vscode.MarkdownString[] = [];
+        for (const {occurrence, keys} of keysAt(project, document.fileName, position)) {
+            for (const key of keys) {
+                // Hovering the definition itself: only if it has comments
+                const defs = project.getDefinitions(key);
+                for (const def of defs.slice(0, 5)) {
+                    const isSelf = occurrence.isDef && def.line === occurrence.line && def.start === occurrence.start;
+                    const md = this.describe(project, def, isSelf);
+                    if (md)
+                        texts.push(md);
+                }
             }
         }
-
-        // End of processing.
-        // Check if 0 entries
-        if (hoverTexts.length == 0)
-            return undefined;  // Nothing found
-
-        // return
-        const hover = new vscode.Hover(hoverTexts);
-        return hover;
+        if (texts.length === 0)
+            return undefined;
+        return new vscode.Hover(texts);
     }
 
+
+    /** Markdown for a definition: header, comments above and the definition line. */
+    protected describe(project: Project, def: SymbolDef, isSelf: boolean): vscode.MarkdownString | undefined {
+        const lines = project.getLines(def.file) ?? [];
+        // Comments above the definition (the line itself is shown as code)
+        const copy = [...lines];
+        if (def.line < copy.length)
+            copy[def.line] = '';
+        const comments = readCommentsForLine(copy, def.line).map(s => s.trim());
+        if (isSelf && comments.length === 0 && def.kind !== 'equ' && def.kind !== 'defl')
+            return undefined;
+
+        const md = new vscode.MarkdownString();
+        const where = path.basename(def.file) + ':' + (def.line + 1);
+        md.appendMarkdown(`**${escape(def.derivedFrom ? def.name : keyName(def.key))}** — ${kindText(def.kind)}, ${escape(where)}\n\n`);
+        if (def.derivedFrom)
+            md.appendMarkdown(`Field of struct instance, see \`${escape(keyName(def.derivedFrom))}\`\n\n`);
+        if (comments.length > 0)
+            md.appendMarkdown(comments.map(escape).join('  \n') + '\n\n');
+        const code = lines[def.line]?.trim();
+        if (code && !isSelf)
+            md.appendCodeblock(code, 'sjasmplus');
+        else if (code && (def.kind === 'equ' || def.kind === 'defl'))
+            md.appendCodeblock(code, 'sjasmplus');
+        return md;
+    }
+}
+
+
+function escape(text: string): string {
+    return text.replace(/[\\`*_{}[\]()#+\-!<>|]/g, '\\$&');
 }

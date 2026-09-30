@@ -22,22 +22,22 @@ export class Config {
 	// true if code lenses should be enabled.
 	public static globalEnableCodeLenses: boolean;
 
-	// true if code lenses should be enabled.
+	// true if hovering should be enabled.
 	public static globalEnableHovering: boolean;
 
-	// true if code lenses should be enabled.
+	// true if completions should be enabled.
 	public static globalEnableCompletions: boolean;
 
-	// true if code lenses should be enabled.
+	// true if goto definition should be enabled.
 	public static globalEnableGotoDefinition: boolean;
 
-	// true if code lenses should be enabled.
+	// true if find all references should be enabled.
 	public static globalEnableFindAllReferences: boolean;
 
-	// true if code lenses should be enabled.
+	// true if renaming should be enabled.
 	public static globalEnableRenaming: boolean;
 
-	// true if code lenses should be enabled.
+	// true if the outline view should be enabled.
 	public static globalEnableOutlineView: boolean;
 
 	// true if workspace symbols should be enabled
@@ -53,29 +53,32 @@ export class Config {
 	// A map with the configs for all workspace folders
 	public static configs = new Map<string, Config>();
 
+	// The config for documents outside of any workspace folder
+	public static defaultConfig: Config;
 
-	// The root folder of the workspace
+
+	// The root folder of the workspace ('' for documents outside of workspace folders)
 	public wsFolderPath: string;
 
 	// true if code lenses should be enabled.
 	public enableCodeLenses: boolean;
 
-	// true if code lenses should be enabled.
+	// true if hovering should be enabled.
 	public enableHovering: boolean;
 
-	// true if code lenses should be enabled.
+	// true if completions should be enabled.
 	public enableCompletions: boolean;
 
-	// true if code lenses should be enabled.
+	// true if goto definition should be enabled.
 	public enableGotoDefinition: boolean;
 
-	// true if code lenses should be enabled.
+	// true if find all references should be enabled.
 	public enableFindAllReferences: boolean;
 
-	// true if code lenses should be enabled.
+	// true if renaming should be enabled.
 	public enableRenaming: boolean;
 
-	// true if code lenses should be enabled.
+	// true if the outline view should be enabled.
 	public enableOutlineView: boolean;
 
 	// true if workspace symbols are enabled
@@ -83,18 +86,6 @@ export class Config {
 
 	// true if folding is enabled
 	public enableFolding: boolean;
-
-	// true if labels with colons should be searched.
-	public labelsWithColons: boolean;
-
-	//  true if labels without colons should be searched.
-	public labelsWithoutColons: boolean;
-
-	// A list of strings with words to exclude from the found labels list.
-	public labelsExcludes: string[];
-
-	// Exclude files (glob pattern)
-	public excludeFiles: string;
 
 	// Required minimum length for completions.
 	public completionsRequiredLength: number;
@@ -119,47 +110,21 @@ export class Config {
 		Config.globalEnableFindAllReferences = false;
 		Config.globalEnableRenaming = false;
 		Config.globalEnableOutlineView = false;
+		Config.globalEnableWorkspaceSymbols = false;
 
-		// Go through each setting
+		// Go through each setting, plus the settings for files outside of workspace folders
+		Config.configs.clear();
 		const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
-		//console.log("# workspacefolders=" + workspaceFolders.length);
+		Config.defaultConfig = Config.create('', PackageInfo.getConfiguration());
+		const all = [Config.defaultConfig];
 		for (const workspaceFolder of workspaceFolders) {
-			// Create a new config instance
-			const config = new Config();
-			// Get settings for folder.
 			const fsPath = workspaceFolder.uri.fsPath;
-			//console.log("workspacefolder=" + fsPath);
-			config.wsFolderPath = fsPath;
-			const settings = PackageInfo.getConfiguration(workspaceFolder);
-			config.labelsWithColons = true;
-			config.labelsWithoutColons = true;
-			const labelsColon = (settings.labels?.colon || '').toLowerCase();
-			if (labelsColon.startsWith('without '))
-				config.labelsWithColons = false;
-			else if (labelsColon.startsWith('with '))
-				config.labelsWithoutColons = false;
-			const labelsExcludesString = settings.labels?.excludes || '';
-			config.labelsExcludes = labelsExcludesString.toLowerCase().split(';');
-			config.excludeFiles = settings.excludeFiles;
-			config.enableCodeLenses = settings.enableCodeLenses;
-			config.enableHovering = settings.enableHovering;
-			config.enableCompletions = settings.enableCompletions;
-			config.enableGotoDefinition = settings.enableGotoDefinition;
-			config.enableFindAllReferences = settings.enableFindAllReferences;
-			config.enableRenaming = settings.enableRenaming;
-			config.enableOutlineView = settings.enableOutlineView;
-			config.completionsRequiredLength = settings.completionsRequiredLength || 0;
-			if (config.completionsRequiredLength < 1)
-				config.completionsRequiredLength = 1;
-			config.workspaceSymbolsRequiredLength = settings.workspaceSymbolsRequiredLength;
-			if (config.workspaceSymbolsRequiredLength < 1)
-				config.workspaceSymbolsRequiredLength = 1;
-			config.enableWorkspaceSymbols = settings.enableWorkspaceSymbols;
-			config.enableFolding = settings.enableFolding;
-			// Store
+			const config = Config.create(fsPath, PackageInfo.getConfiguration(workspaceFolder));
 			Config.configs.set(fsPath, config);
-			// Set global variables
-			Config.globalEnableCodeLenses ||= settings.enableCodeLenses;
+			all.push(config);
+		}
+		for (const config of all) {
+			Config.globalEnableCodeLenses ||= config.enableCodeLenses;
 			Config.globalEnableHovering ||= config.enableHovering;
 			Config.globalEnableCompletions ||= config.enableCompletions;
 			Config.globalEnableGotoDefinition ||= config.enableGotoDefinition;
@@ -171,17 +136,32 @@ export class Config {
 	}
 
 
-	/** Returns a config for a text document.
+	protected static create(fsPath: string, settings: vscode.WorkspaceConfiguration): Config {
+		const config = new Config();
+		config.wsFolderPath = fsPath;
+		config.enableCodeLenses = settings.enableCodeLenses;
+		config.enableHovering = settings.enableHovering;
+		config.enableCompletions = settings.enableCompletions;
+		config.enableGotoDefinition = settings.enableGotoDefinition;
+		config.enableFindAllReferences = settings.enableFindAllReferences;
+		config.enableRenaming = settings.enableRenaming;
+		config.enableOutlineView = settings.enableOutlineView;
+		config.enableWorkspaceSymbols = settings.enableWorkspaceSymbols;
+		config.enableFolding = settings.enableFolding;
+		config.completionsRequiredLength = Math.max(1, settings.completionsRequiredLength || 0);
+		config.workspaceSymbolsRequiredLength = Math.max(1, settings.workspaceSymbolsRequiredLength || 0);
+		return config;
+	}
+
+
+	/** Returns the config for a text document: the one of its workspace folder
+	 * or the default config for documents outside of workspace folders.
 	 * @param document The TextDocument.
-	 * @returns The correspondent config or undefined for the workspace folder the
-	 * TextDocument resides in.
 	 */
-	public static getConfigForDoc(document: vscode.TextDocument) {
-		if (!document)
-			return undefined;
+	public static getConfigForDoc(document: vscode.TextDocument): Config {
 		const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-		if (!workspaceFolder)
-			return undefined;
-		return Config.configs.get(workspaceFolder.uri.fsPath);
+		if (workspaceFolder)
+			return Config.configs.get(workspaceFolder.uri.fsPath) ?? Config.defaultConfig;
+		return Config.defaultConfig;
 	}
 }

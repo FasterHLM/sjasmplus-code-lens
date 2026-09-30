@@ -1,14 +1,15 @@
-import { AllowedLanguageIds } from './languageId';
-import { CommonRegexes } from './regexes/commonregexes';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import {Config} from './config';
-import {FileMatch, grep, grepMultiple, reduceLocations} from './grep';
-import {CommandsRegexes} from './regexes/commandsregexes';
+import {ProjectManager} from './projectmanager';
+import {keyName, kindText} from './symbols';
 
 
 /// Output to the vscode "OUTPUT" tab.
-let output = vscode.window.createOutputChannel("ASM Code Lens");
+const output = vscode.window.createOutputChannel("sjasmplus Code Lens");
+
+
+/** Kinds checked for references. */
+const CHECKED_KINDS = new Set(['label', 'data', 'equ', 'defl', 'struct', 'field', 'macro']);
 
 
 /**
@@ -18,89 +19,28 @@ let output = vscode.window.createOutputChannel("ASM Code Lens");
 export class Commands {
 
     /**
-     * Searches all labels and shows the ones that are not referenced.
-     * @param config The configuration (preferences) to use.
-     * (config.rootFolder The search is limited to the root / project
-     * folder. This needs to contain a trailing '/'.)
+     * Searches all labels, structs, fields and macros of the project of the
+     * document and prints the ones that are not referenced.
+     * @param projects The project manager.
+     * @param document A document of the project.
      */
-    public static async findLabelsWithNoReference(config: Config, languageId: AllowedLanguageIds): Promise<void> {
-        // Get regexes
-        const regex = CommonRegexes.regexLabel(config, languageId);
-        // Get all label definition (locations)
-        const labelLocations = await grepMultiple([regex], config.wsFolderPath, languageId, config.excludeFiles);
-
-        //dbgPrintLocations(locations);
-        // locations is a GrepLocation array that contains all found labels.
-        // Convert this to an array of labels.
-        await this.findLabels(labelLocations, config, languageId);
-    }
-
-
-    /**
-     * Finds all labels without reference.
-     * I.e. prints out all labels in 'locLabels' which are note referenced somewhere.
-     * @param locLabels A list of GrepLocations.
-     * @param rootFolder The search is limited to the root / project folder. This needs to contain a trailing '/'.
-     */
-    protected static async findLabels(locLabels, cfg: Config, languageId: AllowedLanguageIds): Promise<void> {
-        const baseName = path.basename(cfg.wsFolderPath);
-        const typename = (languageId == 'sjasmplus-list') ? 'list' : 'asm';
-        output.appendLine("Unreferenced labels for " + typename + " files, " + baseName + ":");
+    public static async findLabelsWithNoReference(projects: ProjectManager, document: vscode.TextDocument): Promise<void> {
+        const project = await projects.getProject(document);
+        if (!project)
+            return;
+        const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+        const baseDir = folder?.uri.fsPath ?? path.dirname(document.fileName);
+        output.appendLine('Unreferenced labels in ' + path.basename(baseDir) + ':');
         output.show(true);
 
-        try {
-            let labelsCount = locLabels.length;
-            let unrefLabels = 0;
-            const regexEqu = CommandsRegexes.regexLabelEquOrMacro();
-            const regexLbls = CommonRegexes.regexLabel(cfg, languageId);
-            for (const locLabel of locLabels) {
-                // Skip all EQU and MACRO
-                const fm: FileMatch = locLabel.fileMatch;
-                regexEqu.lastIndex = fm.match[1].length;
-                const matchEqu = regexEqu.exec(fm.lineContents);
-                if (matchEqu) {
-                    labelsCount--;
-                    // output.appendLine("labelCount="+labelsCount);
-                    if (labelsCount == 0)
-                        output.appendLine("Done. " + unrefLabels + ' unreferenced label' + ((unrefLabels > 1) ? 's' : '') + ".");
-                    continue;
-                }
+        const unreferenced = project.getAllDefinitions()
+            .filter(d => CHECKED_KINDS.has(d.kind) && project.getReferences(d.key).length === 0)
+            .sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+        for (const def of unreferenced)
+            output.appendLine(`${keyName(def.key)} (${kindText(def.kind)}), ${path.relative(baseDir, def.file)}:${def.line + 1}`);
 
-                // Get label
-                const label = fm.match[2];
-                const searchLabel = label.replace(/\./, '\\.');
-                const pos = new vscode.Position(fm.line, fm.start);
-                const fileName = fm.filePath;
-
-                // And search for references
-                const regex = CommonRegexes.regexAnyReferenceForWord(searchLabel);
-                const locations = await grep(regex, cfg.wsFolderPath, languageId, cfg.excludeFiles);
-                // Remove any locations because of module information (dot notation)
-                const reducedLocations = await reduceLocations(regexLbls, locations, fileName, pos, true, true);
-                // Check count
-                const count = reducedLocations.length;
-                if (count == 0) {
-                    // No reference
-                    unrefLabels++;
-                    output.appendLine(label + ", " + fileName + ":" + (pos.line + 1));
-                }
-                // Check for last search
-                labelsCount--;
-                // output.appendLine("labelCount="+labelsCount);
-                if (labelsCount == 0) {
-                    let unrefText = unrefLabels + ' unreferenced label';
-                    output.appendLine("Done. " + unrefText + ((unrefLabels > 1) ? 's' : '') + ".");
-                }
-            }
-        }
-        catch (e) {
-            console.log("Error: ", e);
-        }
-
-        // Check if any label is unreferenced
-        if (locLabels.length == 0)
-            output.appendLine("None.");
+        const count = unreferenced.length;
+        output.appendLine(count === 0 ? 'None.' : `Done. ${count} unreferenced label${count === 1 ? '' : 's'}.`);
         output.appendLine('');
     }
-
 }
