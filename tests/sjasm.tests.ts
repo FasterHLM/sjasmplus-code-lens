@@ -468,6 +468,39 @@ suite('sjasm project', () => {
 		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [2, 3, 8, 20, 22]);
 	});
 
+	test('conditional assembly: defines of other files', () => {
+		const code = [
+			'    IFDEF FOO',		// 0
+			'    nop',				// 1
+			'    ENDIF',			// 2
+			'    IFNDEF FOO',		// 3
+			'    nop',				// 4
+			'    ENDIF',			// 5
+			'    IFDEF NOWHERE',	// 6
+			'    nop',				// 7: never defined in the project
+			'    ENDIF'
+		].join('\n');
+		// Included by two programs, FOO defined in one: inactive only if inactive in both
+		const two = makeProject({
+			'test.asm': '    DEVICE ZXSPECTRUM48\n    include "code.asm"',
+			'main.asm': '    DEVICE ZXSPECTRUM48\n    DEFINE FOO\n    include "code.asm"',
+			'code.asm': code
+		});
+		assert.deepEqual(two.getInactiveLines(filePath('code.asm')), [7]);
+		// The INCLUDE is not found (no include path): the file is a fragment, FOO is unknown there
+		const fragment = makeProject({
+			'main.asm': '    DEVICE ZXSPECTRUM48\n    DEFINE FOO\n    include "code.asm"',
+			'src/code.asm': code
+		});
+		assert.deepEqual(fragment.getInactiveLines(filePath('src/code.asm')), [7]);
+		// With the include path it is part of the program
+		const found = makeProject({
+			'main.asm': '    DEVICE ZXSPECTRUM48\n    DEFINE FOO\n    include "code.asm"',
+			'src/code.asm': code
+		}, ['src']);
+		assert.deepEqual(found.getInactiveLines(filePath('src/code.asm')), [4, 7]);
+	});
+
 	test('soft references: macro arguments, define values, IFDEF, ASSERT, SAVETAP, Lua', () => {
 		const p = makeProject({
 			'main.asm': [

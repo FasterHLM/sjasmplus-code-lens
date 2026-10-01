@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.4
+- IFDEF blocks were dimmed when the define was in another file, in two cases: the file is included by several programs and only one of them defines the name (now a line is dimmed only if no program assembles it), or the INCLUDE was not found (e.g. a missing include path), so the file was analyzed on its own (now IFDEF of a name that the project defines somewhere is not dimmed there).
+
 ## 0.1.3
 - Other extensions for `.asm` (DeZog, Z80 Macro-Assembler, Z80 Assembly) could take the assembler files, and the extension did nothing. Now it notices such a file and offers to associate the files with sjasmplus; "Check file associations" also reports these extensions.
 - The extension also activates when an assembler file opens in one of these languages (e.g. a single file without a folder).

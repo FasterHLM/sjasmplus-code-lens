@@ -155,6 +155,13 @@ interface WalkState {
 	conditionTaken: (boolean | undefined)[];
 	/** References collected now may stay unresolved (macro arguments). */
 	softRefs: boolean;
+	/**
+	 * The root is a program (or there are none): a define not seen is not
+	 * defined. Otherwise the file may be included from a context we don't
+	 * know (e.g. by an INCLUDE we could not resolve), and IFDEF of a name
+	 * that is defined somewhere in the project is unknown.
+	 */
+	knownDefines: boolean;
 }
 
 
@@ -214,8 +221,13 @@ export class Project {
 	protected defsByFile = new Map<string, SymbolDef[]>();
 	protected includes = new Map<string, IncludeLink[]>();
 	protected scopes = new Map<string, ScopePoint[]>();
-	/** Lines in conditional blocks that are not assembled, per file (from the first walk of the file). */
-	protected inactiveLines = new Map<string, number[]>();
+	/**
+	 * Lines in conditional blocks that are not assembled, per file: the lines
+	 * inactive in every walk of the file (a file included by two programs is
+	 * assembled if one of them assembles it). Walks with knownDefines win over
+	 * the others.
+	 */
+	protected inactiveLines = new Map<string, {lines: Set<number>, knownDefines: boolean}>();
 	protected derived = new Map<string, Set<string>>();
 	protected rootKeys: Set<string>[] = [];
 	/** Roots that are programs (see PROGRAM_DIRECTIVES). */
@@ -232,6 +244,8 @@ export class Project {
 	protected invokedMacros = new Set<string>();
 	protected seen = new Set<string>();
 	protected scopedFiles = new Set<string>();
+	/** Names of all DEFINEs of the project (see WalkState.knownDefines). */
+	protected definedNames = new Set<string>();
 
 
 	constructor(options: ProjectOptions = {}) {
@@ -413,7 +427,8 @@ export class Project {
 	/** Lines inside conditional blocks that are known not to be assembled. */
 	public getInactiveLines(filePath: string): number[] {
 		this.update();
-		return this.inactiveLines.get(fileKey(filePath)) ?? [];
+		const lines = this.inactiveLines.get(fileKey(filePath))?.lines;
+		return lines ? [...lines].sort((a, b) => a - b) : [];
 	}
 
 
@@ -480,17 +495,20 @@ export class Project {
 			});
 		}
 
+		this.collectDefinedNames();
+
 		// Programs first: a file reached from a program and from a fragment keeps the program's view
 		const isProgram = (key: string) => this.getParsed(this.files.get(key)!).parsed.some(pl => pl.statements.some(st => PROGRAM_DIRECTIVES.has(st.opLower)));
 		const roots = members.filter(([key]) => !included.has(key)).map(([key]) => ({key, program: isProgram(key)}));
 		roots.sort((a, b) => Number(b.program) - Number(a.program));
 		this.programRoots.clear();
-		let rootIndex = 0;
-		for (const root of roots) {
+		roots.forEach((root, i) => {
 			if (root.program)
-				this.programRoots.add(rootIndex);
+				this.programRoots.add(i);
+		});
+		let rootIndex = 0;
+		for (const root of roots)
 			this.walkRoot(root.key, rootIndex++);
-		}
 		// Files not reached from any root (e.g. include cycles)
 		for (const [key] of members) {
 			if (!this.seen.has(key))
@@ -511,6 +529,29 @@ export class Project {
 	}
 
 
+	/** Fills definedNames from the DEFINEs and Lua sj.insert_define() of all files. */
+	protected collectDefinedNames() {
+		this.definedNames.clear();
+		for (const entry of this.files.values()) {
+			if (entry.listing)
+				continue;
+			const parsed = this.getParsed(entry);
+			parsed.parsed.forEach((pl, i) => {
+				if (pl.lua) {
+					for (const m of parsed.lines[i].matchAll(/\bsj\s*\.\s*insert_define\s*\(\s*(["'])([^"']+)\1/g))
+						this.definedNames.add(m[2]);
+					return;
+				}
+				for (const st of pl.statements) {
+					const name = st.operands[0];
+					if (/^(define|defarray)\+?$/.test(st.opLower) && name?.kind === TokenKind.Ident)
+						this.definedNames.add(name.text);
+				}
+			});
+		}
+	}
+
+
 	protected newState(root: number): WalkState {
 		return {
 			root,
@@ -521,7 +562,8 @@ export class Project {
 			macroDepth: 0,
 			conditions: [],
 			conditionTaken: [],
-			softRefs: false
+			softRefs: false,
+			knownDefines: this.programRoots.size === 0 || this.programRoots.has(root)
 		};
 	}
 
@@ -550,10 +592,9 @@ export class Project {
 		const parsed = this.getParsed(entry);
 		const recordScopes = !this.scopedFiles.has(key);
 		this.scopedFiles.add(key);
-		if (recordScopes) {
+		if (recordScopes)
 			this.scopes.set(key, []);
-			this.inactiveLines.set(key, []);
-		}
+		const inactiveLines = new Set<number>();
 
 		const len = parsed.parsed.length;
 		for (let i = 0; i < len; i++) {
@@ -577,13 +618,27 @@ export class Project {
 				inactive = state.conditions.slice(0, -1).includes(false);
 			const inactiveBefore = this.isInactive(state);
 			this.processLine(entry, parsed.lines[i], pl, i, state);
-			if (recordScopes) {
+			if (recordScopes)
 				this.recordScope(key, i, state);
-				if (inactive ?? (inactiveBefore && this.isInactive(state)))
-					this.inactiveLines.get(key)!.push(i);
-			}
+			if (inactive ?? (inactiveBefore && this.isInactive(state)))
+				inactiveLines.add(i);
 		}
 		state.includeStack.pop();
+		this.mergeInactiveLines(key, inactiveLines, state.knownDefines);
+	}
+
+
+	/** Keeps the lines that are inactive in all walks of the file (see inactiveLines). */
+	protected mergeInactiveLines(key: string, lines: Set<number>, knownDefines: boolean) {
+		const known = this.inactiveLines.get(key);
+		if (!known || (knownDefines && !known.knownDefines))
+			this.inactiveLines.set(key, {lines, knownDefines});
+		else if (knownDefines === known.knownDefines) {
+			for (const line of known.lines) {
+				if (!lines.has(line))
+					known.lines.delete(line);
+			}
+		}
 	}
 
 
@@ -920,7 +975,8 @@ export class Project {
 				let defined: boolean | undefined;
 				if (nameToken?.kind === TokenKind.Ident) {
 					this.addPendingDefineRef(state, nameToken, file, line);
-					defined = state.defines.has(nameToken.text);
+					// In a fragment a define of the project may come from an includer we don't see
+					defined = state.defines.has(nameToken.text) || (state.knownDefines || !this.definedNames.has(nameToken.text) ? false : undefined);
 				}
 				const value = defined === undefined ? undefined : (op === 'ifdef') === defined;
 				state.conditions.push(value);
