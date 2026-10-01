@@ -93,6 +93,9 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		const list: vscode.CompletionList = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', mainUri, pos(main, 'jr .loop', 5));
 		const labels = list.items.map(i => typeof i.label === 'string' ? i.label : i.label.label);
 		assert.ok(labels.includes('.loop'), labels.join(' '));
+		// Triggered by typing the dot alone
+		const afterDot: vscode.CompletionList = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', mainUri, pos(main, 'jr .loop', 4), '.');
+		assert.ok(afterDot.items.some(i => i.label === '.loop'), 'after "."');
 	});
 
 	test('folding', async () => {

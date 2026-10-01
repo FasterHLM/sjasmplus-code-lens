@@ -125,7 +125,7 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
 
     // Register
     if (Config.globalEnableCompletions) {
-        regCompletionProposalsProvider = vscode.languages.registerCompletionItemProvider(asmListFiles, new CompletionProposalsProvider(projects));
+        regCompletionProposalsProvider = vscode.languages.registerCompletionItemProvider(asmListFiles, new CompletionProposalsProvider(projects), '.');
         context.subscriptions.push(regCompletionProposalsProvider);
     }
 

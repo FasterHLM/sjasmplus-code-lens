@@ -119,7 +119,8 @@ export class CompletionProposalsProvider implements vscode.CompletionItemProvide
         let len = word.length;
         if (word.startsWith('.'))
             len--; // Require one more character for local labels.
-        if (len < config.completionsRequiredLength)
+        // Right after a dot (local labels, module members) no minimum length
+        if (len < config.completionsRequiredLength && !before.endsWith('.'))
             return new vscode.CompletionList([], true);    // Ask again when more is typed
         const range = new vscode.Range(position.line, position.character - before.length, position.line, position.character + after.length);
 

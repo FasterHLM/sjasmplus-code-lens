@@ -124,7 +124,7 @@ export function completionKind(def: SymbolDef): vscode.CompletionItemKind {
 		case 'defl': return vscode.CompletionItemKind.Variable;
 		case 'struct': return vscode.CompletionItemKind.Struct;
 		case 'field': return vscode.CompletionItemKind.Field;
-		case 'macro': return vscode.CompletionItemKind.Snippet;
+		case 'macro': return vscode.CompletionItemKind.Method;
 		case 'module': return vscode.CompletionItemKind.Module;
 		case 'define': return vscode.CompletionItemKind.Constant;
 		default: return vscode.CompletionItemKind.Function;
