@@ -9,9 +9,10 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 // The project folder to try the extension on (asked at start).
-                // Opening a folder later from the new window may open yet another window
-                // without this extension (setting "window.openFoldersInNewWindow").
                 "${input:projectFolder}",
+                // Separate settings: user settings like "files.associations" or
+                // "window.openFoldersInNewWindow" would interfere with the test.
+                "--user-data-dir=${workspaceFolder}/.vscode-test/dev-user-data",
                 // Both claim .asm files and would compete with this extension.
                 "--disable-extension=maziac.asm-code-lens",
                 "--disable-extension=mborik.z80-macroasm",
@@ -31,6 +32,9 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 //"--disable-extensions",
+                // Separate settings: user settings like "files.associations" or
+                // "window.openFoldersInNewWindow" would interfere with the test.
+                "--user-data-dir=${workspaceFolder}/.vscode-test/dev-user-data",
                 // Both claim .asm files and would compete with this extension.
                 "--disable-extension=maziac.asm-code-lens",
                 "--disable-extension=mborik.z80-macroasm",

@@ -30,6 +30,17 @@ The extension builds a symbol index the way sjasmplus assembles the source: it s
 
 Renaming changes only the part of a name that belongs to the symbol, e.g. renaming `clear` in module `util` turns `util.clear` into `util.cls` and `util.clear.fast` into `util.cls.fast`.
 
+## Coming from ASM Code Lens
+
+If your settings associate assembler files with the language ids of ASM Code Lens 2.x (or of another assembler extension), the files are not opened as sjasmplus. Change the associations to `sjasmplus` (and `sjasmplus-list` for listings), e.g.
+
+```json
+"files.associations": {
+    "*.asm": "sjasmplus",
+    "*.a80": "sjasmplus"
+}
+```
+
 ## Settings
 
 All settings start with `sjasmplus-code-lens.`. The most important ones:
