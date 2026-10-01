@@ -10,12 +10,9 @@
             "args": [
                 // The project folder to try the extension on (asked at start).
                 "${input:projectFolder}",
-                // Separate settings: user settings like "files.associations" or
-                // "window.openFoldersInNewWindow" would interfere with the test.
-                "--user-data-dir=${workspaceFolder}/.vscode-test/dev-user-data",
-                // Both claim .asm files and would compete with this extension.
-                "--disable-extension=maziac.asm-code-lens",
-                "--disable-extension=mborik.z80-macroasm",
+                // A temporary empty profile: no installed extensions (ASM Code Lens etc. would
+                // compete for .asm files) and no user settings (e.g. "files.associations").
+                "--profile-temp",
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "sourceMaps": true,
@@ -31,13 +28,9 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                //"--disable-extensions",
-                // Separate settings: user settings like "files.associations" or
-                // "window.openFoldersInNewWindow" would interfere with the test.
-                "--user-data-dir=${workspaceFolder}/.vscode-test/dev-user-data",
-                // Both claim .asm files and would compete with this extension.
-                "--disable-extension=maziac.asm-code-lens",
-                "--disable-extension=mborik.z80-macroasm",
+                // A temporary empty profile: no installed extensions (ASM Code Lens etc. would
+                // compete for .asm files) and no user settings (e.g. "files.associations").
+                "--profile-temp",
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "sourceMaps": true,
