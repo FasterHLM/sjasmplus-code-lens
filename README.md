@@ -2,7 +2,7 @@
 
 A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://github.com/z00m128/sjasmplus), aimed mainly at ZX Spectrum development. It understands your project the way sjasmplus does: modules, local labels, structs, macros, `INCLUDE`s. So reference counts, navigation and renaming are exact, not a text search.
 
-> **Status:** preview. Bug reports and ideas are welcome in the [issues](https://github.com/kolnogorov/sjasmplus-code-lens/issues).
+> **Status:** preview. Questions and discussion in the [Telegram chat](https://t.me/sjasmpluscodelens), bug reports and ideas in the [issues](https://github.com/kolnogorov/sjasmplus-code-lens/issues).
 
 ## Features
 
@@ -192,6 +192,11 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 - Labels inside macros are resolved where the macro is used; names glued together by define substitution are not followed.
 - Syntax options of the command line (`--syntax=...`) are not known; highlighting follows the sjasmplus defaults.
 - Each listing file is indexed on its own.
+
+## Feedback
+
+- **Questions, help, discussion:** the Telegram chat [t.me/sjasmpluscodelens](https://t.me/sjasmpluscodelens)
+- **Bugs and feature requests:** [GitHub issues](https://github.com/kolnogorov/sjasmplus-code-lens/issues). For a wrong reference or "Label not found", a few lines of source that show it help the most.
 
 ## Development
 

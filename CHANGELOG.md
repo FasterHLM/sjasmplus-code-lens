@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.2
+- Telegram chat for questions and discussion: https://t.me/sjasmpluscodelens (README, Q & A link on the Marketplace).
+
 ## 0.1.1
 - README: getting started, how to use each feature, all settings and commands, limitations.
 
