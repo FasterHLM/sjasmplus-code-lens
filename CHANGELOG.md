@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+- Other extensions for `.asm` (DeZog, Z80 Macro-Assembler, Z80 Assembly) could take the assembler files, and the extension did nothing. Now it notices such a file and offers to associate the files with sjasmplus; "Check file associations" also reports these extensions.
+- The extension also activates when an assembler file opens in one of these languages (e.g. a single file without a folder).
+- Breakpoints can be set in sjasmplus files and listings (DeZog only enables them for its own list of languages).
+
 ## 0.1.2
 - Telegram chat for questions and discussion: https://t.me/sjasmpluscodelens (README, Q & A link on the Marketplace).
 

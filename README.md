@@ -21,7 +21,7 @@ A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://
 ## Getting started
 
 1. **Open the folder of your project** (File > Open Folder), the folder you run sjasmplus in. The extension indexes all sjasmplus files of the folder.
-2. **Check the language.** Files ending in `.asm`, `.a80`, `.z80` and `.inc` open as *sjasmplus*, listings (`.lst`, `.list`, `.lis`) as *sjasmplus listing*. The language is shown on the right of the status bar; click it to change it for a file. If your settings associate these files with another extension (e.g. `"*.asm": "asm-collection"` of ASM Code Lens), the extension offers to change that, see [Coming from ASM Code Lens](#coming-from-asm-code-lens).
+2. **Check the language.** Files ending in `.asm`, `.a80`, `.z80` and `.inc` open as *sjasmplus*, listings (`.lst`, `.list`, `.lis`) as *sjasmplus listing*. The language is shown on the right of the status bar; click it to change it for a file. Other assembler extensions (DeZog, Z80 Macro-Assembler, ASM Code Lens) claim `.asm` too, and VS Code may give the files to them: then this extension stays silent. It notices that and offers to associate the files with sjasmplus, see [Other assembler extensions](#other-assembler-extensions).
 3. **Tell it about your build**, if needed, in `.vscode/settings.json` of the project:
 
    ```jsonc
@@ -96,19 +96,23 @@ The colors come from your color theme (Ctrl+K Ctrl+T). To change single colors f
 
 "Developer: Inspect Editor Tokens and Scopes" (Ctrl+Shift+P) shows the scopes and semantic token types under the cursor. Semantic colors (code labels `function`, data `variable`, constants `variable.readonly`, `struct`, `property`, `macro`, `namespace`) can be changed with `editor.semanticTokenColorCustomizations`.
 
-## Coming from ASM Code Lens
+## Other assembler extensions
 
-ASM Code Lens 2.x used the language ids `asm-collection` and `asm-list-file`. If your settings associate assembler files with them (or with another assembler extension), the files are not opened as sjasmplus. When the extension finds such entries in `files.associations` it offers to change them, for the workspace or everywhere. You can also run the command "sjasmplus: Check file associations" later, or change them by hand:
+A file has one language, and only the extensions for that language work on it. Several extensions contribute a language for `.asm` and `.inc`: DeZog and ASM Code Lens (`asm-collection`), Z80 Macro-Assembler (`z80-macroasm`), Z80 Assembly (`z80-asm`). When nothing in the settings decides it, VS Code picks one of them by the extension ids, often not sjasmplus. Settings like `"*.asm": "asm-collection"` (from ASM Code Lens 2.x) send the files elsewhere too.
+
+When a `.asm` file opens in another language, or `files.associations` has such entries, the extension offers to associate the files with sjasmplus, for the workspace or everywhere. You can also run the command "sjasmplus: Check file associations" later, or add the associations by hand:
 
 ```json
 "files.associations": {
     "*.asm": "sjasmplus",
+    "*.inc": "sjasmplus",
     "*.a80": "sjasmplus",
+    "*.z80": "sjasmplus",
     "*.lst": "sjasmplus-list"
 }
 ```
 
-Disable ASM Code Lens (and other extensions for `.asm`) for these projects, so they don't compete for the files.
+Extensions that work on top of a language need sjasmplus added to their settings, e.g. Z80 Assembly meter: `"z80-asm-meter.languageIds": ["sjasmplus"]`. DeZog breakpoints can be set in sjasmplus files and listings: the extension enables breakpoints for its languages.
 
 ## How it understands your project
 
@@ -183,7 +187,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 | Command | Description |
 |---|---|
 | Find Labels with no Reference | Editor context menu. Lists labels, constants, structs, fields and macros that are never used. |
-| sjasmplus: Check file associations | Checks `files.associations` for assembler files that are sent to other extensions and offers to fix them. |
+| sjasmplus: Check file associations | Checks `files.associations` and other installed extensions for assembler files that are sent to other languages and offers to fix them. |
 | sjasmplus: Associate assembler files with sjasmplus in this workspace | Fixes them for the workspace without asking. |
 
 ## Limitations

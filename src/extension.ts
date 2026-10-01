@@ -16,7 +16,7 @@ import {FoldingProvider} from './FoldingRangeProvider';
 import {FormattingProvider} from './FormattingProvider';
 import {DiagnosticsProvider} from './DiagnosticsProvider';
 import {SEMANTIC_LEGEND, SemanticTokensProvider} from './SemanticTokensProvider';
-import {checkFileAssociations, fixFileAssociations} from './AssociationCheck';
+import {checkFileAssociations, fixFileAssociations, watchFileAssociations} from './AssociationCheck';
 import {LISTING_LANGUAGE, ProjectManager, SOURCE_LANGUAGE} from './projectmanager';
 
 
@@ -65,8 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
         // check for the 'onDidChangeWorkspaceFolders' event.
     }));
 
-    // Assembler files associated with another language never reach this extension
-    checkFileAssociations(context).catch(e => console.log(e));
+    // Assembler files associated with another language (in the settings or by
+    // another extension) never reach this extension
+    watchFileAssociations(context);
     context.subscriptions.push(
         vscode.commands.registerCommand('sjasmplus-code-lens.check-file-associations', () => checkFileAssociations(context, true)),
         vscode.commands.registerCommand('sjasmplus-code-lens.fix-file-associations', (scope?: 'workspace' | 'everywhere') => fixFileAssociations(scope ?? 'workspace'))
