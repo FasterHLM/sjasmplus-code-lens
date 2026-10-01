@@ -43,7 +43,7 @@ All settings start with `sjasmplus-code-lens.`. The most important ones:
 
 ## Development
 
-- `npm ci`, then press F5 in VS Code to start an Extension Development Host.
+- `npm ci`, then start "Launch Extension: open a project" in the Run and Debug view (F5). It asks for a sjasmplus project folder and opens it in an Extension Development Host window with this extension loaded.
 - `npm test` runs the unit tests of the parser and the symbol index.
 - `npm run test:integration` runs the providers inside a downloaded VS Code on the project in `tests/integration/fixture`.
 

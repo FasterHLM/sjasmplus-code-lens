@@ -3,6 +3,28 @@
     "version": "0.1.0",
     "configurations": [
         {
+            "name": "Launch Extension: open a project",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                // The project folder to try the extension on (asked at start).
+                // Opening a folder later from the new window may open yet another window
+                // without this extension (setting "window.openFoldersInNewWindow").
+                "${input:projectFolder}",
+                // Both claim .asm files and would compete with this extension.
+                "--disable-extension=maziac.asm-code-lens",
+                "--disable-extension=mborik.z80-macroasm",
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "sourceMaps": true,
+            "outFiles": [ "${workspaceFolder}/out/extension.js" ],
+            "preLaunchTask": "watch",
+            "skipFiles": [
+                "**/extensionHostProcess.js"
+            ]
+        },
+        {
             "name": "Launch Extension",
             "type": "extensionHost",
             "request": "launch",
@@ -20,6 +42,14 @@
             "skipFiles": [
                 "**/extensionHostProcess.js"
             ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "projectFolder",
+            "type": "promptString",
+            "description": "Folder of a sjasmplus project to open",
+            "default": "C:/speccy/crux"
         }
     ]
 }
