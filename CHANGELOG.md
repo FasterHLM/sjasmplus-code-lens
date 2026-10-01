@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1
+- README: getting started, how to use each feature, all settings and commands, limitations.
+
+## 0.1.0
 - Forked from [ASM Code Lens](https://marketplace.visualstudio.com/items?itemName=maziac.asm-code-lens) 2.6.3 by maziac.
 - Language ids are now `sjasmplus` and `sjasmplus-list`, settings and commands use the `sjasmplus-code-lens.` prefix.
 - Listing files: `.lst` added. Sources: `.s` is no longer associated.

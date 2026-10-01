@@ -1,7 +1,7 @@
 {
     "name": "sjasmplus-code-lens",
     "displayName": "sjasmplus Code Lens",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "publisher": "kolnogorov",
     "description": "Code lens, references, go to definition, rename, outline and hover for Z80 assembly written for sjasmplus.",
     "author": {
@@ -132,7 +132,7 @@
                     "scope": "resource",
                     "type": "boolean",
                     "default": true,
-                    "markdownDescription": "Enable/disable the possibility to [rename](https://code.visualstudio.com/docs/editor/editingevolved#_rename-symbol) labels. You need to reload the extension to take effect."
+                    "markdownDescription": "Enable/disable [renaming](https://code.visualstudio.com/docs/editor/editingevolved#_rename-symbol) of labels, structs, fields, macros, defines and modules."
                 },
                 "sjasmplus-code-lens.enableFolding": {
                     "order": 86,

@@ -1,85 +1,202 @@
 # sjasmplus Code Lens
 
-A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://github.com/z00m128/sjasmplus), aimed mainly at ZX Spectrum development.
+A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://github.com/z00m128/sjasmplus), aimed mainly at ZX Spectrum development. It understands your project the way sjasmplus does: modules, local labels, structs, macros, `INCLUDE`s. So reference counts, navigation and renaming are exact, not a text search.
 
 > **Status:** preview. Bug reports and ideas are welcome in the [issues](https://github.com/kolnogorov/sjasmplus-code-lens/issues).
 
 ## Features
 
-- Syntax highlighting for sjasmplus sources and listing files, also in Markdown code blocks (` ```sjasmplus `, ` ```z80 `, ` ```asm `, ` ```sjasmplus-list `)
+- Syntax highlighting for sjasmplus sources and listing files, also in Markdown code blocks
 - Code lenses with the number of references above labels, constants, structs, struct fields, macros and defines
 - Go to Definition, Find All References, Rename
-- Outline view and breadcrumbs, "Go to Symbol in Workspace"
 - Hover with the comments above a definition
-- Completions of labels, local labels, macros and defines
-- Code folding for labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF` and `LUA` blocks
-- Formatting ("Format Document", "Format Selection"), see below
-- "Find Labels with no Reference" (editor context menu) to spot dead code
-- Problems for labels that are not defined ("Label not found"), without the noise of macros, defines, blocks that are not assembled and files that no program includes
+- Completions of labels, local labels, macros, defines, instructions and directives
+- Outline view, breadcrumbs, "Go to Symbol in Workspace"
+- Problems for labels that are not defined ("Label not found")
 - `IFDEF`/`IFNDEF` blocks that are not assembled are dimmed
-- Semantic highlighting: labels of code, data, constants, structs, fields, macros, defines and modules in their own colors
-- A hexadecimal calculator in the explorer and debug views
+- Semantic highlighting: code labels, data, constants, structs, fields, macros, defines and modules in their own colors
+- Formatting that adapts to the style of each file
+- Code folding, "Find Labels with no Reference", a hexadecimal calculator
 
-## sjasmplus aware
+## Getting started
 
-The extension builds a symbol index the way sjasmplus assembles the source: it starts at the main files (the files that no other file includes), follows `INCLUDE`s and gives every symbol its full sjasmplus name. So references are exact, not a text search:
+1. **Open the folder of your project** (File > Open Folder), the folder you run sjasmplus in. The extension indexes all sjasmplus files of the folder.
+2. **Check the language.** Files ending in `.asm`, `.a80`, `.z80` and `.inc` open as *sjasmplus*, listings (`.lst`, `.list`, `.lis`) as *sjasmplus listing*. The language is shown on the right of the status bar; click it to change it for a file. If your settings associate these files with another extension (e.g. `"*.asm": "asm-collection"` of ASM Code Lens), the extension offers to change that, see [Coming from ASM Code Lens](#coming-from-asm-code-lens).
+3. **Tell it about your build**, if needed, in `.vscode/settings.json` of the project:
 
-- `MODULE` prefixes (also when the module is opened in the including file), `@global` labels, `!labels` that don't start a new local scope
-- local labels `.loop` belong to the preceding label, `Main.loop` refers to them from elsewhere
-- lookup like sjasmplus: first in the current module, then global
-- `STRUCT` fields and the fields of struct instances (`pos POINT` defines `pos.x`, references to `pos.x` count for `POINT.x`)
-- macros are expanded where they are used: labels inside a macro get the module and local scope of the call site
-- temporary labels (`1`, `1_B`, `1_F`, and `1B`/`1F` in branches)
-- `DEFINE`s, `IFDEF`, `IFUSED`, `EQU`, `DEFL`/`=`
+   ```jsonc
+   {
+       // INCLUDE paths given to sjasmplus with -i / --inc (the project folder is always searched)
+       "sjasmplus-code-lens.includePaths": ["lib", "${workspaceFolder}/../common"],
+       // Defines given with -D, so IFDEF blocks are evaluated like in your build
+       "sjasmplus-code-lens.defines": ["_DEBUG_"],
+       // Folders that are not part of the project (old code, other assemblers)
+       "sjasmplus-code-lens.excludeFiles": "**/{old,_archive}/**"
+   }
+   ```
 
-Renaming changes only the part of a name that belongs to the symbol, e.g. renaming `clear` in module `util` turns `util.clear` into `util.cls` and `util.clear.fast` into `util.cls.fast`.
+   If you build with `--dirbol`, also set `"sjasmplus-code-lens.dirbol": true`.
+
+That's it: open a source file and the reference counts appear above the labels.
+
+## How to use it
+
+The key bindings are the defaults of VS Code on Windows and Linux.
+
+| What | How |
+|---|---|
+| See where a label is used | Click the "N references" above it, or Shift+F12 |
+| Go to a definition | F12 or Ctrl+click. On `vdp.Cls` a click on `vdp` goes to the module, on `Cls` to the label. On an `INCLUDE` line it opens the file. On a struct instance field (`pos.x`) it shows the instance and the field of the struct. |
+| Peek a definition | Alt+F12 |
+| Rename a label, struct, field, macro, define or module | F2. Only the part of each name that belongs to the symbol changes: renaming `clear` in module `util` turns `util.clear` into `util.cls` and `util.clear.fast` into `util.cls.fast`. |
+| Read the description of a routine | Hover the label: the comment lines above the definition are shown |
+| Complete a name | Ctrl+Space. Typing `.` lists the local labels of the current routine, `module.` the labels of the module. |
+| Jump within the file | Outline view in the Explorer, breadcrumbs above the editor, or Ctrl+Shift+O |
+| Jump to any symbol of the project | Ctrl+T, then type a part of the name |
+| See undefined labels | Problems panel (Ctrl+Shift+M) |
+| Find dead code | Right-click in the editor > "Find Labels with no Reference". The list appears in the Output panel. |
+| Format | Shift+Alt+F for the file, Ctrl+K Ctrl+F for the selection, or `"editor.formatOnSave": true` |
+| Fold | The arrows next to the line numbers: labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF`, `LUA` |
+| Convert numbers | The "Hexadecimal Calculator" view in the Explorer (and in Run and Debug) |
+| Assembler in Markdown | Start a code block with ` ```sjasmplus `, ` ```z80 ` or ` ```asm ` (` ```sjasmplus-list ` for listings) |
+
+### Problems ("Label not found")
+
+References to labels that are defined nowhere are reported, like sjasmplus would. To keep this free of false alarms, these are not reported:
+
+- code in `IFDEF`/`IFNDEF` blocks that are not assembled (these are dimmed; set `defines` for the defines of your command line),
+- macro arguments and macro bodies, the values of `DEFINE`s, the text of `ASSERT` messages,
+- files that no program includes. A program is a main file with `DEVICE`, `OUTPUT` or one of the `SAVE...` directives; other files are fragments, e.g. old code lying around.
+
+### Formatting
+
+The formatter keeps the style of each file instead of imposing one. It only changes whitespace (and the case of keywords if you ask for it); labels stay at the beginning of the line and the code itself never changes.
+
+- Instructions move to the column most lines of the file use. Lines indented deeper are nested code (e.g. the body of an `IF` inside a routine) and keep their offset. Directives written left of the instructions (`MODULE`, `IFDEF`, `DEFINE`, ...) keep their own column.
+- Comments after code are aligned within each group of consecutive lines.
+- Tabs or spaces and the tab size come from the editor (`editor.insertSpaces`, `editor.tabSize`).
+- Lines in block comments, Lua, multi-line struct initializers and lines with `/* */` are left as they are.
+
+All of this can be changed with the `format.` settings below, e.g. a fixed column, lower case keywords or a space after commas.
+
+### Colors
+
+The colors come from your color theme (Ctrl+K Ctrl+T). To change single colors for sjasmplus only, use `editor.tokenColorCustomizations` with scopes below `source.sjasmplus`:
+
+```json
+"editor.tokenColorCustomizations": {
+    "textMateRules": [
+        { "scope": "source.sjasmplus keyword.other.instruction", "settings": { "foreground": "#569CD6" } },
+        { "scope": "source.sjasmplus keyword.control.directive", "settings": { "foreground": "#C586C0" } },
+        { "scope": "source.sjasmplus support.type.register", "settings": { "foreground": "#4EC9B0" } },
+        { "scope": "source.sjasmplus entity.name.function.label", "settings": { "fontStyle": "bold" } }
+    ]
+}
+```
+
+"Developer: Inspect Editor Tokens and Scopes" (Ctrl+Shift+P) shows the scopes and semantic token types under the cursor. Semantic colors (code labels `function`, data `variable`, constants `variable.readonly`, `struct`, `property`, `macro`, `namespace`) can be changed with `editor.semanticTokenColorCustomizations`.
 
 ## Coming from ASM Code Lens
 
-If your settings associate assembler files with the language ids of ASM Code Lens 2.x (or of another assembler extension), the files are not opened as sjasmplus. The extension notices this and offers to change the associations for the workspace or everywhere (also later with the command "sjasmplus: Check file associations"). By hand: associate the files with `sjasmplus` (and `sjasmplus-list` for listings), e.g.
+ASM Code Lens 2.x used the language ids `asm-collection` and `asm-list-file`. If your settings associate assembler files with them (or with another assembler extension), the files are not opened as sjasmplus. When the extension finds such entries in `files.associations` it offers to change them, for the workspace or everywhere. You can also run the command "sjasmplus: Check file associations" later, or change them by hand:
 
 ```json
 "files.associations": {
     "*.asm": "sjasmplus",
-    "*.a80": "sjasmplus"
+    "*.a80": "sjasmplus",
+    "*.lst": "sjasmplus-list"
 }
 ```
 
+Disable ASM Code Lens (and other extensions for `.asm`) for these projects, so they don't compete for the files.
+
+## How it understands your project
+
+The extension builds a symbol index the way sjasmplus assembles: it starts at the main files (the files that no other file includes), follows `INCLUDE`s with the include paths and gives every symbol its full sjasmplus name:
+
+- `MODULE` prefixes, also when the module is opened in the including file; `@global` labels; `!labels` that don't start a new local scope
+- local labels `.loop` belong to the preceding label; `Main.loop` refers to them from elsewhere
+- lookup like sjasmplus: first in the current module, then global
+- `STRUCT` fields and the fields of struct instances (`pos POINT` defines `pos.x`, references to `pos.x` count for `POINT.x`)
+- macros are expanded where they are used: labels inside a macro get the module and local scope of the call site
+- temporary labels (`1`, `1_B`, `1_F`, and `1B`/`1F` in branches)
+- `DEFINE`, `UNDEFINE`, `IFDEF`/`IFNDEF`, `EQU`, `DEFL`/`=`, and defines and labels created by Lua (`sj.insert_define`, `sj.insert_label`)
+
 ## Settings
 
-All settings start with `sjasmplus-code-lens.`. The most important ones:
+All settings start with `sjasmplus-code-lens.` and can be set per workspace folder (except the ones marked *user*).
 
-| Setting | Description |
-|---|---|
-| `includePaths` | Directories searched for `INCLUDE` files, like `-i`/`--inc` of sjasmplus. The workspace folder is always searched. |
-| `dirbol` | Directives at the beginning of a line, like `--dirbol` of sjasmplus. |
-| `defines` | Defines set on the command line (`-D`), so the extension knows which `IFDEF` blocks are assembled. |
-| `diagnostics.unresolvedLabels` | Severity of "Label not found" problems, or `off`. |
-| `dimInactiveBlocks` | Dim `IFDEF`/`IFNDEF` blocks that are not assembled. |
-| `excludeFiles` | Glob of files to leave out of the index, e.g. `**/{old,_archive}/**`. Worth setting for folders with sources of other assemblers: they are indexed too and slow down large workspaces. |
-| `enableCodeLenses`, `enableHovering`, ... | Switch single features off. |
+### Project
 
-## Formatting
-
-The formatter adapts to the style of each file instead of imposing one. It only changes whitespace (and the case of keywords, if you want): labels stay at the beginning of the line, the code itself is never changed. Tabs or spaces and the tab size come from the editor settings (`editor.insertSpaces`, `editor.tabSize`). Format on save works with the usual `editor.formatOnSave`.
-
-| Setting (`sjasmplus-code-lens.format.`) | Default | |
+| Setting | Default | Description |
 |---|---|---|
-| `indentation` | `align` | `align`: statements go to the instruction column. Lines indented deeper are nested code and keep their offset; directives written left of the instructions (`MODULE`, `IFDEF`, ...) go to the directive column. `keep`: indentation is not changed. |
-| `instructionColumn` | `0` | 0 = the most frequent column of the file, or a column counted from 0 (24 = three tabs of 8). |
-| `directiveColumn` | `0` | 0 = the most frequent column of the outdented directives of the file, or a column. |
-| `case` | `keep` | `lower` / `upper` for instructions, directives, registers, conditions and operator words. Labels, macros and strings are never changed. |
-| `commaSpace` | `keep` | `none` (`ld a,b`) / `space` (`ld a, b`). The double comma `,,` stays together. |
-| `operandSpacing` | `keep` | `space` / `tab` between the instruction and its operands. |
-| `trailingComments` | `align` | `align` comments after code within each group of consecutive lines (or to `commentColumn`), `keep`. |
-| `commentColumn` | `0` | 0 = per group of lines, or a column. |
+| `includePaths` | `[]` | Directories searched for `INCLUDE` files, like `-i`/`--inc`. Relative to the workspace folder, `${workspaceFolder}` may be used. The workspace folder itself is always searched. |
+| `defines` | `[]` | Defines of the command line (`-D`), e.g. `["_DEBUG_"]`. Used to know which `IFDEF`/`IFNDEF` blocks are assembled. |
+| `dirbol` | `false` | Directives at the beginning of a line, like `--dirbol`. |
+| `excludeFiles` | `""` | Glob of files to leave out, e.g. `**/{old,_archive}/**`. Worth it for folders with sources of other assemblers: they are indexed too and slow down large workspaces. |
 
-Lines inside block comments and Lua, multi-line struct initializers and lines with `/* */` are left as they are.
+### Features
+
+| Setting | Default | Description |
+|---|---|---|
+| `enableCodeLenses` | `true` | Reference counts above the labels. |
+| `enableHovering` | `true` | Comments of a definition when hovering. |
+| `enableCompletions` | `true` | Completions. |
+| `completionsRequiredLength` | `1` | Characters to type before completions are offered (not needed after a `.`). |
+| `enableGotoDefinition` | `true` | Go to Definition. |
+| `enableFindAllReferences` | `true` | Find All References. |
+| `enableRenaming` | `true` | Rename. |
+| `enableOutlineView` | `true` | Outline view and breadcrumbs. |
+| `enableWorkspaceSymbols` | `true` | "Go to Symbol in Workspace" (Ctrl+T). |
+| `workspaceSymbolsRequiredLength` | `2` | Characters to type before workspace symbols are listed. |
+| `enableFolding` | `true` | Code folding. |
+| `enableFormatting` | `true` | Formatting. |
+| `enableSemanticHighlighting` | `true` | Colors from the symbol index. Needs `editor.semanticHighlighting.enabled` (on for most themes). |
+| `diagnostics.unresolvedLabels` | `warning` | Severity of "Label not found": `off`, `hint`, `information`, `warning`, `error`. |
+| `dimInactiveBlocks` | `true` | Dim `IFDEF`/`IFNDEF` blocks that are not assembled. |
+| `enablePushPopMatching` | `true` | *user* Highlight matching `push`/`pop` like brackets. |
+| `comments.toggleLineCommentPrefix` | `;` | *user* Prefix for "Toggle Line Comment" (Ctrl+/), e.g. `//`. |
+
+### Formatting
+
+| Setting | Default | Description |
+|---|---|---|
+| `format.indentation` | `align` | `align`: statements go to the instruction column, nested code keeps its offset, outdented directives go to the directive column. `keep`: indentation is not changed. |
+| `format.instructionColumn` | `0` | 0 = the most frequent column of the file, or a column counted from 0 (24 = three tabs of 8). |
+| `format.directiveColumn` | `0` | 0 = the most frequent column of the outdented directives of the file, or a column. |
+| `format.case` | `keep` | `lower` / `upper` for instructions, directives, registers, conditions and operator words. Labels, macros and strings are never changed. |
+| `format.commaSpace` | `keep` | `none` (`ld a,b`) or `space` (`ld a, b`). The double comma `,,` stays together. |
+| `format.operandSpacing` | `keep` | `space` or `tab` between the instruction and its operands. |
+| `format.trailingComments` | `align` | `align` comments after code (per group of consecutive lines, or to `format.commentColumn`), or `keep`. |
+| `format.commentColumn` | `0` | 0 = per group of lines, or a column counted from 0. |
+
+### Hexadecimal calculator
+
+| Setting | Default | Description |
+|---|---|---|
+| `hexCalculator.showInExplorer` | `true` | Show the calculator in the Explorer. |
+| `hexCalculator.showInDebug` | `true` | Show the calculator in Run and Debug. |
+| `hexCalculator.hexPrefix` | `0x` | *user* Prefix of hex values, e.g. `$` or `#`. |
+
+## Commands
+
+| Command | Description |
+|---|---|
+| Find Labels with no Reference | Editor context menu. Lists labels, constants, structs, fields and macros that are never used. |
+| sjasmplus: Check file associations | Checks `files.associations` for assembler files that are sent to other extensions and offers to fix them. |
+| sjasmplus: Associate assembler files with sjasmplus in this workspace | Fixes them for the workspace without asking. |
+
+## Limitations
+
+- Conditions with expressions (`IF`, `IFN`, `IFUSED`) are not evaluated; their blocks count as assembled.
+- Labels inside macros are resolved where the macro is used; names glued together by define substitution are not followed.
+- Syntax options of the command line (`--syntax=...`) are not known; highlighting follows the sjasmplus defaults.
+- Each listing file is indexed on its own.
 
 ## Development
 
 - `npm ci`, then start "Launch Extension: open a project" in the Run and Debug view (F5). It asks for a sjasmplus project folder and opens it in an Extension Development Host window with this extension loaded.
-- `npm test` runs the unit tests of the parser and the symbol index.
+- `npm test` runs the unit tests of the parser, the symbol index and the formatter.
 - `npm run test:integration` runs the providers inside a downloaded VS Code on the project in `tests/integration/fixture`.
 - `npm run package` builds the `.vsix` (install it with "Extensions: Install from VSIX..."), `npm run publish` publishes it to the Marketplace.
 
