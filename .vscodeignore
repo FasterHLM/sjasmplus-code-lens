@@ -17,3 +17,4 @@ assets/remote/
 **/coverage/
 package-lock.json
 assets/local/icon.svg
+assets/social/
