@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.5
+- Hex numbers like `#4000` or `#FF0000` are no longer shown as colors with a color picker in sjasmplus files and listings (`editor.colorDecorators` is off for these languages by default).
+
 ## 0.1.4
 - IFDEF blocks were dimmed when the define was in another file, in two cases: the file is included by several programs and only one of them defines the name (now a line is dimmed only if no program assembles it), or the INCLUDE was not found (e.g. a missing include path), so the file was analyzed on its own (now IFDEF of a name that the project defines somewhere is not dimmed there).
 

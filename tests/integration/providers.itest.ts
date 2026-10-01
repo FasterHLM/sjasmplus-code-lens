@@ -154,6 +154,11 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		assert.deepEqual(text.split('\n'), ['\tnop', '\tinc a', '\tld a , b\t; c', 'label:\tret', '']);
 	});
 
+	test('no color decorators for hex numbers', async () => {
+		// VS Code's default color provider takes #4000 or #FF0000 for colors
+		assert.equal(vscode.workspace.getConfiguration('editor', main).get('colorDecorators'), false);
+	});
+
 	test('code lens follows edits', async () => {
 		const editor = await vscode.window.showTextDocument(main);
 		await editor.edit(b => b.insert(new vscode.Position(10, 0), '\tcall util.clear\n'));

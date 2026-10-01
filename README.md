@@ -96,6 +96,8 @@ The colors come from your color theme (Ctrl+K Ctrl+T). To change single colors f
 
 "Developer: Inspect Editor Tokens and Scopes" (Ctrl+Shift+P) shows the scopes and semantic token types under the cursor. Semantic colors (code labels `function`, data `variable`, constants `variable.readonly`, `struct`, `property`, `macro`, `namespace`) can be changed with `editor.semanticTokenColorCustomizations`.
 
+VS Code shows hex numbers like `#4000` or `#FF0000` as colors with a color picker in any file. The extension turns this off for sjasmplus files and listings; to get it back, set `"[sjasmplus]": { "editor.colorDecorators": true }`.
+
 ## Other assembler extensions
 
 A file has one language, and only the extensions for that language work on it. Several extensions contribute a language for `.asm` and `.inc`: DeZog and ASM Code Lens (`asm-collection`), Z80 Macro-Assembler (`z80-macroasm`), Z80 Assembly (`z80-asm`). When nothing in the settings decides it, VS Code picks one of them by the extension ids, often not sjasmplus. Settings like `"*.asm": "asm-collection"` (from ASM Code Lens 2.x) send the files elsewhere too.
