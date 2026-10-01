@@ -13,6 +13,7 @@ A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://
 - Hover with the comments above a definition
 - Completions of labels, local labels, macros and defines
 - Code folding for labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF` and `LUA` blocks
+- Formatting ("Format Document", "Format Selection"), see below
 - "Find Labels with no Reference" (editor context menu) to spot dead code
 - A hexadecimal calculator in the explorer and debug views
 
@@ -51,6 +52,23 @@ All settings start with `sjasmplus-code-lens.`. The most important ones:
 | `dirbol` | Directives at the beginning of a line, like `--dirbol` of sjasmplus. |
 | `excludeFiles` | Glob of files to leave out of the index, e.g. `**/{old,_archive}/**`. |
 | `enableCodeLenses`, `enableHovering`, ... | Switch single features off. |
+
+## Formatting
+
+The formatter adapts to the style of each file instead of imposing one. It only changes whitespace (and the case of keywords, if you want): labels stay at the beginning of the line, the code itself is never changed. Tabs or spaces and the tab size come from the editor settings (`editor.insertSpaces`, `editor.tabSize`). Format on save works with the usual `editor.formatOnSave`.
+
+| Setting (`sjasmplus-code-lens.format.`) | Default | |
+|---|---|---|
+| `indentation` | `align` | `align`: statements go to the instruction column. Lines indented deeper are nested code and keep their offset; directives written left of the instructions (`MODULE`, `IFDEF`, ...) go to the directive column. `keep`: indentation is not changed. |
+| `instructionColumn` | `0` | 0 = the most frequent column of the file, or a column counted from 0 (24 = three tabs of 8). |
+| `directiveColumn` | `0` | 0 = the most frequent column of the outdented directives of the file, or a column. |
+| `case` | `keep` | `lower` / `upper` for instructions, directives, registers, conditions and operator words. Labels, macros and strings are never changed. |
+| `commaSpace` | `keep` | `none` (`ld a,b`) / `space` (`ld a, b`). The double comma `,,` stays together. |
+| `operandSpacing` | `keep` | `space` / `tab` between the instruction and its operands. |
+| `trailingComments` | `align` | `align` comments after code within each group of consecutive lines (or to `commentColumn`), `keep`. |
+| `commentColumn` | `0` | 0 = per group of lines, or a column. |
+
+Lines inside block comments and Lua, multi-line struct initializers and lines with `/* */` are left as they are.
 
 ## Development
 

@@ -13,6 +13,7 @@ import {PackageInfo} from './packageinfo';
 import {Config} from './config';
 import {WorkspaceSymbolProvider} from './WorkspaceSymbolProvider';
 import {FoldingProvider} from './FoldingRangeProvider';
+import {FormattingProvider} from './FormattingProvider';
 import {LISTING_LANGUAGE, ProjectManager, SOURCE_LANGUAGE} from './projectmanager';
 
 
@@ -98,6 +99,8 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
     removeProvider(regDocumentSymbolProvider, context);
     removeProvider(regWorkspaceSymbolProvider, context);
     removeProvider(regFoldingProvider, context);
+    removeProvider(regFormattingProvider, context);
+    removeProvider(regRangeFormattingProvider, context);
 
     // Re-read settings for all workspaces.
     Config.init();
@@ -163,6 +166,12 @@ function configure(context: vscode.ExtensionContext, event?: vscode.Configuratio
     regFoldingProvider = vscode.languages.registerFoldingRangeProvider({scheme: "file", language: SOURCE_LANGUAGE}, new FoldingProvider());
     context.subscriptions.push(regFoldingProvider);
 
+    // Register (always, checks the setting itself)
+    const formattingProvider = new FormattingProvider();
+    regFormattingProvider = vscode.languages.registerDocumentFormattingEditProvider({scheme: "file", language: SOURCE_LANGUAGE}, formattingProvider);
+    regRangeFormattingProvider = vscode.languages.registerDocumentRangeFormattingEditProvider({scheme: "file", language: SOURCE_LANGUAGE}, formattingProvider);
+    context.subscriptions.push(regFormattingProvider, regRangeFormattingProvider);
+
     // Toggle line Comment configuration
     vscode.languages.setLanguageConfiguration(SOURCE_LANGUAGE, {comments: {lineComment: Config.globalToggleCommentPrefix, blockComment: ["/*", "*/"]}});
     // Store
@@ -206,6 +215,8 @@ let regRenameProvider: vscode.Disposable;
 let regDocumentSymbolProvider: vscode.Disposable;
 let regWorkspaceSymbolProvider: vscode.Disposable;
 let regFoldingProvider: vscode.Disposable;
+let regFormattingProvider: vscode.Disposable;
+let regRangeFormattingProvider: vscode.Disposable;
 
 
 // this method is called when your extension is deactivated

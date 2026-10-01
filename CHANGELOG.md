@@ -13,4 +13,6 @@
 - Folding for `DUP`/`REPT`, `WHILE`, `IF` and `LUA` blocks.
 - New settings `includePaths` and `dirbol`; `labels.colon` and `labels.excludes` are removed (no longer needed).
 - Features also work for files outside of a workspace folder.
+- Formatting ("Format Document", "Format Selection") that adapts to the style of each file: instruction and directive columns, nested code, trailing comments per group of lines; options for keyword case, commas and operand spacing.
+- Completions open when typing '.' (local labels, module members).
 - Fixed: every settings change re-registered all providers, which could drop requests that were in flight.

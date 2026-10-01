@@ -40,6 +40,8 @@ export interface Statement {
 
 export interface ParsedLine {
 	label?: LabelField;
+	/** Column after the label field (label, SMC offset and colon). */
+	labelFieldEnd?: number;
 	statements: Statement[];
 	/** Column of a ';' or '//' comment on the line. */
 	commentStart?: number;
@@ -108,7 +110,7 @@ export function parseLine(line: string, blockDepth = 0, baseCol = 0, dirbol = fa
 	flush();
 
 	return {
-		parsed: {label, statements, commentStart: scan.lineCommentStart},
+		parsed: {label, labelFieldEnd: label ? col : undefined, statements, commentStart: scan.lineCommentStart},
 		blockDepth: scan.blockDepth
 	};
 }

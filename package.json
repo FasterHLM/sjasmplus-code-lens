@@ -136,6 +136,108 @@
                     "default": true,
                     "markdownDescription": "Enable/disable the folding of e.g. labels in asm files."
                 },
+                "sjasmplus-code-lens.enableFormatting": {
+                    "order": 87,
+                    "scope": "resource",
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Enable/disable formatting (\"Format Document\", \"Format Selection\"). Tabs or spaces and the tab size come from `editor.insertSpaces` and `editor.tabSize`."
+                },
+                "sjasmplus-code-lens.format.indentation": {
+                    "order": 131,
+                    "scope": "resource",
+                    "type": "string",
+                    "enum": [
+                        "align",
+                        "keep"
+                    ],
+                    "enumDescriptions": [
+                        "Move statements to the instruction column (directives that are left of the instructions to the directive column). Lines indented deeper than the instruction column are nested code and keep their offset.",
+                        "Leave the indentation as it is."
+                    ],
+                    "default": "align",
+                    "markdownDescription": "Indentation of the statements."
+                },
+                "sjasmplus-code-lens.format.instructionColumn": {
+                    "order": 132,
+                    "scope": "resource",
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0,
+                    "markdownDescription": "Column of the instructions, counted from 0 (e.g. 24 = three tabs of width 8). 0 = the most frequent column in the file. With a column set, nested code keeps its offset."
+                },
+                "sjasmplus-code-lens.format.directiveColumn": {
+                    "order": 133,
+                    "scope": "resource",
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0,
+                    "markdownDescription": "Column of directives written left of the instructions, e.g. `MODULE`, `IFDEF` (0 = the most frequent such column in the file). Counted from 0."
+                },
+                "sjasmplus-code-lens.format.case": {
+                    "order": 134,
+                    "scope": "resource",
+                    "type": "string",
+                    "enum": [
+                        "keep",
+                        "lower",
+                        "upper"
+                    ],
+                    "default": "keep",
+                    "markdownDescription": "Case of instructions, directives, registers, conditions and operator words. Labels, macros and strings are never changed."
+                },
+                "sjasmplus-code-lens.format.commaSpace": {
+                    "order": 135,
+                    "scope": "resource",
+                    "type": "string",
+                    "enum": [
+                        "keep",
+                        "none",
+                        "space"
+                    ],
+                    "enumDescriptions": [
+                        "Leave as it is.",
+                        "`ld a,b`",
+                        "`ld a, b`"
+                    ],
+                    "default": "keep",
+                    "markdownDescription": "Whitespace after commas between operands. The double comma of multi-argument instructions (`,,`) stays together."
+                },
+                "sjasmplus-code-lens.format.operandSpacing": {
+                    "order": 136,
+                    "scope": "resource",
+                    "type": "string",
+                    "enum": [
+                        "keep",
+                        "space",
+                        "tab"
+                    ],
+                    "default": "keep",
+                    "markdownDescription": "Whitespace between the instruction and its operands."
+                },
+                "sjasmplus-code-lens.format.trailingComments": {
+                    "order": 137,
+                    "scope": "resource",
+                    "type": "string",
+                    "enum": [
+                        "align",
+                        "keep"
+                    ],
+                    "enumDescriptions": [
+                        "Align comments after code: within each group of consecutive lines, or to `format.commentColumn`.",
+                        "Leave as it is."
+                    ],
+                    "default": "align",
+                    "markdownDescription": "Comments after code. Comments on their own line are not changed."
+                },
+                "sjasmplus-code-lens.format.commentColumn": {
+                    "order": 138,
+                    "scope": "resource",
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0,
+                    "markdownDescription": "Column of comments after code, counted from 0. 0 = aligned within each group of consecutive lines, to their most frequent column."
+                },
                 "sjasmplus-code-lens.comments.toggleLineCommentPrefix": {
                     "order": 91,
                     "scope": "application",

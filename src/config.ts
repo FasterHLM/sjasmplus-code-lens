@@ -87,6 +87,9 @@ export class Config {
 	// true if folding is enabled
 	public enableFolding: boolean;
 
+	// true if formatting is enabled
+	public enableFormatting: boolean;
+
 	// Required minimum length for completions.
 	public completionsRequiredLength: number;
 
@@ -148,6 +151,7 @@ export class Config {
 		config.enableOutlineView = settings.enableOutlineView;
 		config.enableWorkspaceSymbols = settings.enableWorkspaceSymbols;
 		config.enableFolding = settings.enableFolding;
+		config.enableFormatting = settings.enableFormatting;
 		config.completionsRequiredLength = Math.max(1, settings.completionsRequiredLength || 0);
 		config.workspaceSymbolsRequiredLength = Math.max(1, settings.workspaceSymbolsRequiredLength || 0);
 		return config;

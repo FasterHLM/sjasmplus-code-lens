@@ -115,6 +115,17 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		assert.deepEqual(changes, ['main.asm:5:17-22=cls', 'main.asm:6:11-16=cls', 'util.asm:2:0-5=cls']);
 	});
 
+	test('format document', async () => {
+		const uri = vscode.Uri.file(path.join(fixture, 'format.asm'));
+		const doc = await vscode.workspace.openTextDocument(uri);
+		const edits: vscode.TextEdit[] = await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider', uri, {tabSize: 8, insertSpaces: false});
+		// VS Code reduces the edits to the changed parts: apply them from the end
+		let text = doc.getText();
+		for (const e of [...edits].sort((a, b) => doc.offsetAt(b.range.start) - doc.offsetAt(a.range.start)))
+			text = text.substring(0, doc.offsetAt(e.range.start)) + e.newText + text.substring(doc.offsetAt(e.range.end));
+		assert.deepEqual(text.split('\n'), ['\tnop', '\tinc a', '\tld a , b\t; c', 'label:\tret', '']);
+	});
+
 	test('code lens follows edits', async () => {
 		const editor = await vscode.window.showTextDocument(main);
 		await editor.edit(b => b.insert(new vscode.Position(10, 0), '\tcall util.clear\n'));
