@@ -93,6 +93,11 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		const list: vscode.CompletionList = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', mainUri, pos(main, 'jr .loop', 5));
 		const labels = list.items.map(i => typeof i.label === 'string' ? i.label : i.label.label);
 		assert.ok(labels.includes('.loop'), labels.join(' '));
+		// Global labels, module members, structs and keywords when typing a name
+		const global: vscode.CompletionList = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', mainUri, pos(main, 'call util.clear', 7));
+		const globalLabels = global.items.map(i => typeof i.label === 'string' ? i.label : i.label.label);
+		for (const expected of ['start', 'util.clear', 'util.clear.fast', 'screen.base', 'POINT', 'call'])
+			assert.ok(globalLabels.includes(expected), expected + ' missing');
 		// Triggered by typing the dot alone
 		const afterDot: vscode.CompletionList = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', mainUri, pos(main, 'jr .loop', 4), '.');
 		assert.ok(afterDot.items.some(i => i.label === '.loop'), 'after "."');
