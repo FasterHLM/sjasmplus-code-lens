@@ -168,10 +168,17 @@ interface TempRef {
 }
 
 
-/** Normalized map key for a file path. */
+const fileKeys = new Map<string, string>();
+
+/** Normalized map key for a file path (cached, it is used for every definition and reference). */
 export function fileKey(filePath: string): string {
-	const p = path.resolve(filePath);
-	return process.platform === 'win32' ? p.toLowerCase() : p;
+	let key = fileKeys.get(filePath);
+	if (key === undefined) {
+		const p = path.resolve(filePath);
+		key = process.platform === 'win32' ? p.toLowerCase() : p;
+		fileKeys.set(filePath, key);
+	}
+	return key;
 }
 
 
@@ -941,10 +948,8 @@ export class Project {
 
 
 	protected storeRef(ref: SymbolRef) {
-		const id = `${ref.key}|${fileKey(ref.file)}|${ref.line}|${ref.start}`;
-		if (this.seenOccurrence.has(id))
+		if (!this.markSeen(fileKey(ref.file), ref.line, ref.start, ref.key ?? ''))
 			return;
-		this.seenOccurrence.add(id);
 		if (ref.key) {
 			let list = this.refsByKey.get(ref.key);
 			if (!list)
@@ -956,7 +961,23 @@ export class Project {
 		this.addOccurrence({file: ref.file, line: ref.line, start: ref.start, end: ref.end, written: ref.written, key: ref.key, isDef: false});
 	}
 
-	protected seenOccurrence = new Set<string>();
+	/** Occurrences already stored, per file and position (a file included twice or a replayed macro is walked again). */
+	protected seenOccurrence = new Map<string, Map<number, Set<string>>>();
+
+	/** Returns true (and remembers it) if the occurrence is new. */
+	protected markSeen(fk: string, line: number, start: number, tag: string): boolean {
+		let byPos = this.seenOccurrence.get(fk);
+		if (!byPos)
+			this.seenOccurrence.set(fk, byPos = new Map());
+		const pos = line * 65536 + start;
+		let tags = byPos.get(pos);
+		if (!tags)
+			byPos.set(pos, tags = new Set());
+		if (tags.has(tag))
+			return false;
+		tags.add(tag);
+		return true;
+	}
 
 
 	protected addDef(state: WalkState, d: Omit<SymbolDef, 'module' | 'root'> & {module?: string}): SymbolDef {
@@ -982,11 +1003,8 @@ export class Project {
 			if (!fileDefs)
 				this.defsByFile.set(fk, fileDefs = []);
 			fileDefs.push(def);
-			const id = `${def.key}|${fk}|${def.line}|${def.start}|def`;
-			if (!this.seenOccurrence.has(id)) {
-				this.seenOccurrence.add(id);
+			if (this.markSeen(fk, def.line, def.start, 'def ' + def.key))
 				this.addOccurrence({file: def.file, line: def.line, start: def.start, end: def.end, written: def.written, key: def.key, isDef: true});
-			}
 		}
 		return def;
 	}

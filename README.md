@@ -50,7 +50,7 @@ All settings start with `sjasmplus-code-lens.`. The most important ones:
 |---|---|
 | `includePaths` | Directories searched for `INCLUDE` files, like `-i`/`--inc` of sjasmplus. The workspace folder is always searched. |
 | `dirbol` | Directives at the beginning of a line, like `--dirbol` of sjasmplus. |
-| `excludeFiles` | Glob of files to leave out of the index, e.g. `**/{old,_archive}/**`. |
+| `excludeFiles` | Glob of files to leave out of the index, e.g. `**/{old,_archive}/**`. Worth setting for folders with sources of other assemblers: they are indexed too and slow down large workspaces. |
 | `enableCodeLenses`, `enableHovering`, ... | Switch single features off. |
 
 ## Formatting
