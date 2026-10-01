@@ -143,6 +143,13 @@
                     "default": true,
                     "markdownDescription": "Enable/disable formatting (\"Format Document\", \"Format Selection\"). Tabs or spaces and the tab size come from `editor.insertSpaces` and `editor.tabSize`."
                 },
+                "sjasmplus-code-lens.enableSemanticHighlighting": {
+                    "order": 88,
+                    "scope": "resource",
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Color symbols by what they are (labels of code, data, constants, structs, fields, macros, defines, modules), from the symbol index. Needs `editor.semanticHighlighting.enabled` (on for most themes)."
+                },
                 "sjasmplus-code-lens.format.indentation": {
                     "order": 131,
                     "scope": "resource",
@@ -268,6 +275,37 @@
                     "type": "boolean",
                     "default": false,
                     "markdownDescription": "Recognize directives at the beginning of a line, like the sjasmplus option `--dirbol`."
+                },
+                "sjasmplus-code-lens.defines": {
+                    "order": 107,
+                    "scope": "resource",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "markdownDescription": "Defines set on the sjasmplus command line (`-D`), e.g. `[\"_DEBUG_\"]`. Used to know which `IFDEF`/`IFNDEF` blocks are assembled."
+                },
+                "sjasmplus-code-lens.diagnostics.unresolvedLabels": {
+                    "order": 108,
+                    "scope": "resource",
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "hint",
+                        "information",
+                        "warning",
+                        "error"
+                    ],
+                    "default": "warning",
+                    "markdownDescription": "Report references to labels that are not defined. Not reported: blocks that are not assembled, macro arguments and bodies, define values, and files that no program (a main file with `DEVICE`, `OUTPUT` or `SAVE...`) includes."
+                },
+                "sjasmplus-code-lens.dimInactiveBlocks": {
+                    "order": 109,
+                    "scope": "resource",
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Dim the lines of `IFDEF`/`IFNDEF` blocks that are not assembled (see `defines`)."
                 },
                 "sjasmplus-code-lens.excludeFiles": {
                     "order": 111,

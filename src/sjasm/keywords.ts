@@ -69,6 +69,17 @@ export const NON_EXPRESSION_DIRECTIVES = words(`
 `);
 
 
+/** Directives with keyword arguments (block types, SAVENEX commands, ...), see SAVE_KEYWORDS. */
+export const SAVE_DIRECTIVES = words(`savetap savecdt savenex save3dos saveamsdos savetrd`);
+
+/** Keyword arguments of the SAVE_DIRECTIVES, they are no symbol references. */
+export const SAVE_KEYWORDS = words(`
+	basic code numbers chars headless full empty
+	open core cfg cfg3 bar palette screen copper bank auto close
+	none default mem bmp l2 l2_320 l2_640 lr scr shc shr tile
+`);
+
+
 /** Defines predefined by sjasmplus (case sensitive). */
 export const PREDEFINED = new Set(`
 	__SJASMPLUS__ __VERSION__ __ERRORS__ __WARNINGS__ __DATE__ __TIME__ __PASS__

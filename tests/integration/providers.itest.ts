@@ -115,6 +115,34 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		assert.deepEqual(changes, ['main.asm:5:17-22=cls', 'main.asm:6:11-16=cls', 'util.asm:2:0-5=cls']);
 	});
 
+	test('diagnostics', async () => {
+		// Published after the project is loaded (debounced)
+		let diagnostics: vscode.Diagnostic[] = [];
+		for (let i = 0; i < 50 && diagnostics.length === 0; i++) {
+			await new Promise(resolve => setTimeout(resolve, 100));
+			diagnostics = vscode.languages.getDiagnostics(mainUri);
+		}
+		// Only the active reference, not the one in the IFDEF block of an undefined define
+		assert.deepEqual(diagnostics.map(d => `${d.range.start.line}:${d.message}`), ['21:Label not found: not_defined']);
+	});
+
+	test('semantic tokens', async () => {
+		const legend: vscode.SemanticTokensLegend = await vscode.commands.executeCommand('vscode.provideDocumentSemanticTokensLegend', mainUri);
+		const tokens: vscode.SemanticTokens = await vscode.commands.executeCommand('vscode.provideDocumentSemanticTokens', mainUri);
+		// Decode the relative encoding into "line:char text type[.modifiers]"
+		const decoded: string[] = [];
+		let line = 0, char = 0;
+		for (let i = 0; i < tokens.data.length; i += 5) {
+			const [dLine, dChar, length, type, mods] = tokens.data.slice(i, i + 5);
+			line += dLine;
+			char = dLine === 0 ? char + dChar : dChar;
+			const modifiers = legend.tokenModifiers.filter((m, k) => mods & (1 << k));
+			decoded.push(`${line}:${main.lineAt(line).text.substr(char, length)} ${[legend.tokenTypes[type], ...modifiers].join('.')}`);
+		}
+		for (const expected of ['5:start function.declaration', '5:util namespace', '5:clear function', '7:screen namespace', '7:base variable.readonly', '13:POINT struct.declaration', '19:pos variable', '19:x property'])
+			assert.ok(decoded.includes(expected), expected + ' missing in ' + decoded.join(', '));
+	});
+
 	test('format document', async () => {
 		const uri = vscode.Uri.file(path.join(fixture, 'format.asm'));
 		const doc = await vscode.workspace.openTextDocument(uri);

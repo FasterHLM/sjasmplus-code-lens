@@ -90,6 +90,9 @@ export class Config {
 	// true if formatting is enabled
 	public enableFormatting: boolean;
 
+	// true if semantic highlighting is enabled
+	public enableSemanticHighlighting: boolean;
+
 	// Required minimum length for completions.
 	public completionsRequiredLength: number;
 
@@ -152,6 +155,7 @@ export class Config {
 		config.enableWorkspaceSymbols = settings.enableWorkspaceSymbols;
 		config.enableFolding = settings.enableFolding;
 		config.enableFormatting = settings.enableFormatting;
+		config.enableSemanticHighlighting = settings.enableSemanticHighlighting;
 		config.completionsRequiredLength = Math.max(1, settings.completionsRequiredLength || 0);
 		config.workspaceSymbolsRequiredLength = Math.max(1, settings.workspaceSymbolsRequiredLength || 0);
 		return config;

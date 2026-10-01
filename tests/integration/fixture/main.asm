@@ -19,3 +19,7 @@ y	BYTE 0
 pos	POINT
 	ld a,(pos.x)
 	ld b,POINT.y
+	call not_defined
+	ifdef NOT_SET
+	call also_missing
+	endif

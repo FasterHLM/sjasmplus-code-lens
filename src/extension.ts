@@ -14,6 +14,8 @@ import {Config} from './config';
 import {WorkspaceSymbolProvider} from './WorkspaceSymbolProvider';
 import {FoldingProvider} from './FoldingRangeProvider';
 import {FormattingProvider} from './FormattingProvider';
+import {DiagnosticsProvider} from './DiagnosticsProvider';
+import {SEMANTIC_LEGEND, SemanticTokensProvider} from './SemanticTokensProvider';
 import {LISTING_LANGUAGE, ProjectManager, SOURCE_LANGUAGE} from './projectmanager';
 
 
@@ -26,6 +28,14 @@ export function activate(context: vscode.ExtensionContext) {
     // The symbol index of all sjasmplus projects
     projects = new ProjectManager();
     context.subscriptions.push(projects);
+
+    // Unresolved labels and dimmed inactive blocks
+    context.subscriptions.push(new DiagnosticsProvider(projects));
+
+    // Semantic highlighting (checks the setting itself)
+    context.subscriptions.push(vscode.languages.registerDocumentSemanticTokensProvider(
+        [{scheme: "file", language: SOURCE_LANGUAGE}, {scheme: "file", language: LISTING_LANGUAGE}],
+        new SemanticTokensProvider(projects), SEMANTIC_LEGEND));
 
     // Register the hex calculator webviews
     hexCalcExplorerProvider = new HexCalcProvider();

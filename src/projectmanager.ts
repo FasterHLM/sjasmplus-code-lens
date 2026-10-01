@@ -106,14 +106,29 @@ export class ProjectManager implements vscode.Disposable {
 
 	/** Returns the projects of all workspace folders (loaded). */
 	public async getFolderProjects(): Promise<Project[]> {
-		const projects: Project[] = [];
+		return (await this.getFolderProjectsWithFolders()).map(fp => fp.project);
+	}
+
+
+	/** Returns the projects of all workspace folders (loaded) with their folder. */
+	public async getFolderProjectsWithFolders(): Promise<{folder: vscode.WorkspaceFolder, project: Project}[]> {
+		const result: {folder: vscode.WorkspaceFolder, project: Project}[] = [];
 		for (const folder of vscode.workspace.workspaceFolders ?? []) {
 			const fp = this.getFolderProject(folder);
 			await fp.loading;
 			fp.project.update();
-			projects.push(fp.project);
+			result.push({folder, project: fp.project});
 		}
-		return projects;
+		return result;
+	}
+
+
+	/** Returns the project of a document if it is loaded already (no loading, no update). */
+	public getLoadedProject(doc: vscode.TextDocument): Project | undefined {
+		const folder = vscode.workspace.getWorkspaceFolder(doc.uri);
+		if (doc.languageId === SOURCE_LANGUAGE && folder)
+			return this.folders.get(folder.uri.toString())?.project;
+		return this.singles.get(doc.uri.toString());
 	}
 
 
@@ -123,7 +138,8 @@ export class ProjectManager implements vscode.Disposable {
 		if (!fp) {
 			const project = new Project(this.projectOptions(folder));
 			fp = {project};
-			fp.loading = this.loadFolder(folder, project);
+			// Tell listeners (diagnostics, decorations) when the folder is read
+			fp.loading = this.loadFolder(folder, project).then(() => this.fireChange());
 			this.folders.set(key, fp);
 		}
 		return fp;
@@ -156,6 +172,7 @@ export class ProjectManager implements vscode.Disposable {
 		return {
 			includePaths,
 			dirbol: settings.get<boolean>('dirbol') ?? false,
+			defines: settings.get<string[]>('defines') ?? [],
 			readFile: filePath => this.readFileSync(filePath)
 		};
 	}

@@ -12,7 +12,7 @@
 import * as path from 'path';
 import {Token, TokenKind} from './lexer';
 import {getFileOperand, LabelField, ParsedLine, ParsedText, parseText, Statement} from './parser';
-import {BRANCHES, CONDITIONS, DATA_DIRECTIVES, DEFL_DIRECTIVES, DIRECTIVES, EQU_DIRECTIVES, MNEMONICS, NON_EXPRESSION_DIRECTIVES, PREDEFINED, REGISTERS, WORD_OPERATORS} from './keywords';
+import {BRANCHES, CONDITIONS, DATA_DIRECTIVES, DEFL_DIRECTIVES, DIRECTIVES, EQU_DIRECTIVES, MNEMONICS, NON_EXPRESSION_DIRECTIVES, PREDEFINED, REGISTERS, SAVE_DIRECTIVES, SAVE_KEYWORDS, WORD_OPERATORS} from './keywords';
 
 
 export type SymbolKind = 'label' | 'data' | 'equ' | 'defl' | 'struct' | 'field' | 'macro' | 'module' | 'define' | 'temp' | 'macrolocal';
@@ -52,6 +52,10 @@ export interface SymbolRef {
 	start: number;
 	end: number;
 	root: number;
+	/** In a block that is not assembled (IFDEF of an undefined define, ...). */
+	inactive?: boolean;
+	/** May legitimately stay unresolved: macro arguments and bodies, IFDEF checks. */
+	soft?: boolean;
 }
 
 
@@ -93,6 +97,8 @@ export interface ProjectOptions {
 	readFile?: (filePath: string) => string | undefined;
 	/** Like sjasmplus --dirbol. */
 	dirbol?: boolean;
+	/** Defines given on the command line (sjasmplus -D). */
+	defines?: string[];
 }
 
 
@@ -143,6 +149,12 @@ interface WalkState {
 	macro?: {info: MacroInfo, params: Set<string>};
 	includeStack: string[];
 	macroDepth: number;
+	/** Conditional assembly: true/false if known, undefined if it depends on an expression. */
+	conditions: (boolean | undefined)[];
+	/** Per conditional block: whether a branch was taken already (undefined if unknown). */
+	conditionTaken: (boolean | undefined)[];
+	/** References collected now may stay unresolved (macro arguments). */
+	softRefs: boolean;
 }
 
 
@@ -184,6 +196,8 @@ export function fileKey(filePath: string): string {
 
 const CONDITIONAL_OPS = new Set(['jp', 'jr', 'call', 'ret']);
 const FILE_FIRST_OPERAND = new Set(['incbin', 'binary', 'insert', 'inchob', 'inctrd', 'savebin', 'savedev', 'savehob', 'savesna', 'savetap', 'savetrd', 'save3dos', 'saveamsdos', 'savecdt', 'savecpcsna', 'savecpr', 'savehex', 'shellexec', 'emptytrd', 'emptytap']);
+/** Directives that produce output: a root file with one of them is a program (not a fragment). */
+const PROGRAM_DIRECTIVES = new Set(['device', 'output', 'savesna', 'savebin', 'savetap', 'savetrd', 'savenex', 'savedev', 'savehob', 'save3dos', 'saveamsdos', 'savecdt', 'savecpcsna', 'savecpr', 'savehex', 'emptytrd', 'emptytap']);
 const MAX_INCLUDE_DEPTH = 20;
 const MAX_MACRO_DEPTH = 20;
 
@@ -200,8 +214,12 @@ export class Project {
 	protected defsByFile = new Map<string, SymbolDef[]>();
 	protected includes = new Map<string, IncludeLink[]>();
 	protected scopes = new Map<string, ScopePoint[]>();
+	/** Lines in conditional blocks that are not assembled, per file (from the first walk of the file). */
+	protected inactiveLines = new Map<string, number[]>();
 	protected derived = new Map<string, Set<string>>();
 	protected rootKeys: Set<string>[] = [];
+	/** Roots that are programs (see PROGRAM_DIRECTIVES). */
+	protected programRoots = new Set<number>();
 	protected unresolved: SymbolRef[] = [];
 
 	// Walk state shared by all roots
@@ -359,6 +377,18 @@ export class Project {
 	}
 
 
+	/**
+	 * Unresolved references worth reporting: not in blocks that are not
+	 * assembled, not in macros or defines, and in files that belong to a
+	 * program (files no program includes are fragments, e.g. old code).
+	 */
+	public getReportableUnresolved(): SymbolRef[] {
+		this.update();
+		const programs = this.programRoots;
+		return this.getUnresolved().filter(r => !r.soft && !r.inactive && (programs.size === 0 || programs.has(r.root)));
+	}
+
+
 	/** References that could not be resolved. */
 	public getUnresolved(): SymbolRef[] {
 		this.update();
@@ -370,6 +400,20 @@ export class Project {
 	public includeAt(filePath: string, line: number, character: number): IncludeLink | undefined {
 		this.update();
 		return (this.includes.get(fileKey(filePath)) ?? []).find(l => l.line === line && l.start <= character && character <= l.end);
+	}
+
+
+	/** The kind of a symbol (cheap, for every occurrence of a document). */
+	public getKind(key: string): SymbolKind | undefined {
+		this.update();
+		return this.defsByKey.get(key)?.[0]?.kind;
+	}
+
+
+	/** Lines inside conditional blocks that are known not to be assembled. */
+	public getInactiveLines(filePath: string): number[] {
+		this.update();
+		return this.inactiveLines.get(fileKey(filePath)) ?? [];
 	}
 
 
@@ -402,6 +446,7 @@ export class Project {
 		this.defsByFile.clear();
 		this.includes.clear();
 		this.scopes.clear();
+		this.inactiveLines.clear();
 		this.derived.clear();
 		this.rootKeys = [];
 		this.unresolved = [];
@@ -435,10 +480,17 @@ export class Project {
 			});
 		}
 
-		const roots = members.filter(([key]) => !included.has(key)).map(([key]) => key);
+		// Programs first: a file reached from a program and from a fragment keeps the program's view
+		const isProgram = (key: string) => this.getParsed(this.files.get(key)!).parsed.some(pl => pl.statements.some(st => PROGRAM_DIRECTIVES.has(st.opLower)));
+		const roots = members.filter(([key]) => !included.has(key)).map(([key]) => ({key, program: isProgram(key)}));
+		roots.sort((a, b) => Number(b.program) - Number(a.program));
+		this.programRoots.clear();
 		let rootIndex = 0;
-		for (const key of roots)
-			this.walkRoot(key, rootIndex++);
+		for (const root of roots) {
+			if (root.program)
+				this.programRoots.add(rootIndex);
+			this.walkRoot(root.key, rootIndex++);
+		}
 		// Files not reached from any root (e.g. include cycles)
 		for (const [key] of members) {
 			if (!this.seen.has(key))
@@ -464,10 +516,19 @@ export class Project {
 			root,
 			modules: [],
 			lastLabel: {name: '_', global: false},
-			defines: new Set(),
+			defines: new Set(this.options.defines ?? []),
 			includeStack: [],
-			macroDepth: 0
+			macroDepth: 0,
+			conditions: [],
+			conditionTaken: [],
+			softRefs: false
 		};
+	}
+
+
+	/** True inside a conditional block that is known not to be assembled. */
+	protected isInactive(state: WalkState): boolean {
+		return state.conditions.includes(false);
 	}
 
 
@@ -489,25 +550,59 @@ export class Project {
 		const parsed = this.getParsed(entry);
 		const recordScopes = !this.scopedFiles.has(key);
 		this.scopedFiles.add(key);
-		if (recordScopes)
+		if (recordScopes) {
 			this.scopes.set(key, []);
+			this.inactiveLines.set(key, []);
+		}
 
 		const len = parsed.parsed.length;
 		for (let i = 0; i < len; i++) {
 			const pl = parsed.parsed[i];
-			if (pl.lua)
+			if (pl.lua) {
+				this.processLuaLine(entry, parsed.lines[i], i, state);
 				continue;
+			}
 			// MACRO definition: skip the body, it is replayed on invocation
 			const macroInfo = this.checkMacroDefinition(entry, parsed, i, state);
 			if (macroInfo) {
 				i = macroInfo.endLine ?? macroInfo.lastLine;
 				continue;
 			}
+			// IF/ELSE/ENDIF lines belong to the enclosing block, other lines to the current one
+			const op = pl.statements[0]?.opLower ?? '';
+			let inactive: boolean | undefined;
+			if (/^(if|ifn|ifdef|ifndef|ifused|ifnused)$/.test(op))
+				inactive = this.isInactive(state);
+			else if (/^(else|elseif|endif)$/.test(op))
+				inactive = state.conditions.slice(0, -1).includes(false);
+			const inactiveBefore = this.isInactive(state);
 			this.processLine(entry, parsed.lines[i], pl, i, state);
-			if (recordScopes)
+			if (recordScopes) {
 				this.recordScope(key, i, state);
+				if (inactive ?? (inactiveBefore && this.isInactive(state)))
+					this.inactiveLines.get(key)!.push(i);
+			}
 		}
 		state.includeStack.pop();
+	}
+
+
+	/** Defines and labels created by Lua scripts: sj.insert_define("name", ...), sj.insert_label("name", ...). */
+	protected processLuaLine(entry: FileEntry, lineText: string, line: number, state: WalkState) {
+		const regex = /\bsj\s*\.\s*insert_(define|label)\s*\(\s*(["'])([^"']+)\2/g;
+		let m: RegExpExecArray | null;
+		while ((m = regex.exec(lineText))) {
+			const name = m[3];
+			const start = m.index + m[0].length - 1 - name.length;
+			const loc = {file: entry.path, line, start, end: start + name.length};
+			if (m[1] === 'define') {
+				this.addDef(state, {key: 'D:' + name, name, kind: 'define', written: name, ...loc});
+				if (!this.isInactive(state))
+					state.defines.add(name);
+			}
+			else
+				this.addDef(state, {key: 'L:' + name, name, kind: 'label', written: name, ...loc});
+		}
 	}
 
 
@@ -738,7 +833,9 @@ export class Project {
 			if (macro?.def) {
 				this.addResolvedRef(state, 'X:' + st.opText, st.opText, file, line, st.op.start, st.op.end);
 				this.invokedMacros.add(macro.def.key);
+				state.softRefs = true;
 				this.collectRefs(operands, state, file, line, false, false);
+				state.softRefs = false;
 				// A listing contains the expanded lines already
 				if (!entry.listing)
 					this.replayMacro(macro, state);
@@ -799,26 +896,70 @@ export class Project {
 						this.addResolvedRef(state, 'D:' + name, name, file, line, nameToken.start, nameToken.end);
 					else
 						this.addDef(state, {key: 'D:' + name, name, kind: 'define', written: name, file, line, start: nameToken.start, end: nameToken.end});
-					state.defines.add(name);
+					if (!this.isInactive(state))
+						state.defines.add(name);
 				}
+				// The value is text that is substituted later, not necessarily a label
+				state.softRefs = true;
 				this.collectRefs(operands.slice(1), state, file, line, false, false);
+				state.softRefs = false;
 				return;
 			}
 			case 'undefine': {
 				const nameToken = operands[0];
 				if (nameToken?.kind === TokenKind.Ident) {
 					this.addPendingDefineRef(state, nameToken, file, line);
-					state.defines.delete(nameToken.text);
+					if (!this.isInactive(state))
+						state.defines.delete(nameToken.text);
 				}
 				return;
 			}
 			case 'ifdef':
 			case 'ifndef': {
 				const nameToken = operands[0];
-				if (nameToken?.kind === TokenKind.Ident)
+				let defined: boolean | undefined;
+				if (nameToken?.kind === TokenKind.Ident) {
 					this.addPendingDefineRef(state, nameToken, file, line);
+					defined = state.defines.has(nameToken.text);
+				}
+				const value = defined === undefined ? undefined : (op === 'ifdef') === defined;
+				state.conditions.push(value);
+				state.conditionTaken.push(value);
 				return;
 			}
+			case 'if':
+			case 'ifn':
+			case 'ifused':
+			case 'ifnused':
+				this.collectRefs(operands, state, file, line, false, false);
+				state.conditions.push(undefined);
+				state.conditionTaken.push(undefined);
+				return;
+			case 'else': {
+				const last = state.conditions.length - 1;
+				if (last >= 0) {
+					const taken = state.conditionTaken[last];
+					state.conditions[last] = taken === undefined ? undefined : !taken;
+					state.conditionTaken[last] = taken === undefined ? undefined : true;
+				}
+				return;
+			}
+			case 'elseif': {
+				const last = state.conditions.length - 1;
+				if (last < 0)
+					return;
+				// The condition is evaluated in the context of the enclosing blocks
+				state.conditions[last] = undefined;
+				this.collectRefs(operands, state, file, line, false, false);
+				const taken = state.conditionTaken[last];
+				state.conditions[last] = taken === true ? false : undefined;
+				state.conditionTaken[last] = taken === true ? true : undefined;
+				return;
+			}
+			case 'endif':
+				state.conditions.pop();
+				state.conditionTaken.pop();
+				return;
 			case 'include': {
 				const operand = getFileOperand(lineText, st);
 				// A listing contains the included lines already
@@ -869,6 +1010,25 @@ export class Project {
 			else
 				this.addLabelRef(state, st.op, file, line);
 		}
+
+		// ASSERT expression[, message]: the message is free text
+		if (op === 'assert') {
+			let depth = 0;
+			const end = exprOperands.findIndex(t => {
+				if (t.text === '(' || t.text === '[' || t.text === '{')
+					depth++;
+				else if (t.text === ')' || t.text === ']' || t.text === '}')
+					depth--;
+				return depth === 0 && t.text === ',';
+			});
+			if (end >= 0)
+				exprOperands = exprOperands.slice(0, end);
+		}
+		// Keyword arguments (SAVETAP ...,CODE,... / SAVENEX OPEN) and DISPLAY formats (/A, /D)
+		if (SAVE_DIRECTIVES.has(op))
+			exprOperands = exprOperands.filter(t => !SAVE_KEYWORDS.has(t.text.toLowerCase()));
+		if (op === 'display')
+			exprOperands = exprOperands.filter((t, i) => exprOperands[i - 1]?.text !== '/');
 
 		const isBranch = BRANCHES.has(op);
 		const hasCondition = CONDITIONAL_OPS.has(op);
@@ -921,8 +1081,19 @@ export class Project {
 	}
 
 
+	/** A new reference with the flags of the current state. */
+	protected newRef(state: WalkState, written: string, file: string, line: number, start: number, end: number, key?: string): SymbolRef {
+		const ref: SymbolRef = {key, written, file, line, start, end, root: state.root};
+		if (this.isInactive(state))
+			ref.inactive = true;
+		if (state.softRefs || state.macro)
+			ref.soft = true;
+		return ref;
+	}
+
+
 	protected addLabelRef(state: WalkState, t: Token, file: string, line: number) {
-		const ref: SymbolRef = {written: t.text, file, line, start: t.start, end: t.end, root: state.root};
+		const ref = this.newRef(state, t.text, file, line, t.start, t.end);
 		let candidates = this.labelCandidates(t.text, state);
 		if (state.macro && t.text.startsWith('.'))
 			candidates = ['ML:' + state.macro.info.def.name + '>' + t.text, ...candidates];
@@ -931,19 +1102,20 @@ export class Project {
 
 
 	protected addPendingDefineRef(state: WalkState, t: Token, file: string, line: number) {
-		const ref: SymbolRef = {written: t.text, file, line, start: t.start, end: t.end, root: state.root};
+		const ref = this.newRef(state, t.text, file, line, t.start, t.end);
+		ref.soft = true;	// IFDEF etc. test defines that may not exist
 		this.pending.push({ref, candidates: ['D:' + t.text]});
 	}
 
 
 	protected addTempRef(state: WalkState, t: Token, num: string, forward: boolean, file: string, line: number) {
-		const ref: SymbolRef = {written: t.text, file, line, start: t.start, end: t.end, root: state.root};
+		const ref = this.newRef(state, t.text, file, line, t.start, t.end);
 		this.tempRefs.push({ref, num, forward, seq: this.tempSeq});
 	}
 
 
 	protected addResolvedRef(state: WalkState, key: string, written: string, file: string, line: number, start: number, end: number) {
-		this.storeRef({key, written, file, line, start, end, root: state.root});
+		this.storeRef(this.newRef(state, written, file, line, start, end, key));
 	}
 
 

@@ -433,6 +433,77 @@ suite('sjasm project', () => {
 		assert.equal(p.getReferences('L:val').length, 1);
 	});
 
+	test('conditional assembly: inactive blocks', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',	// 0
+				'    IFDEF DEBUG',			// 1
+				'    call missing1',		// 2: inactive
+				'    DEFINE INNER',			// 3: inactive, does not define
+				'    ELSE',					// 4
+				'    call missing2',		// 5: active
+				'    ENDIF',				// 6
+				'    IFDEF INNER',			// 7
+				'    call missing3',		// 8: inactive
+				'    ELSEIF 1',				// 9
+				'    call missing4',		// 10: unknown
+				'    ELSE',					// 11
+				'    call missing5',		// 12: unknown
+				'    ENDIF',				// 13
+				'    IFDEF CMDLINE',		// 14
+				'    call missing6',		// 15: active, defined on the command line
+				'    ENDIF',				// 16
+				'    IFNDEF DEBUG',			// 17
+				'    nop',					// 18: active
+				'    ELSEIF 1',				// 19
+				'    call missing7',		// 20: inactive (a branch was taken)
+				'    ELSE',					// 21
+				'    call missing8',		// 22: inactive
+				'    ENDIF'					// 23
+			].join('\n')
+		});
+		p.setOptions({defines: ['CMDLINE']});
+		const reported = p.getReportableUnresolved().map(r => r.written).sort();
+		assert.deepEqual(reported, ['missing2', 'missing4', 'missing5', 'missing6']);
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [2, 3, 8, 20, 22]);
+	});
+
+	test('soft references: macro arguments, define values, IFDEF, ASSERT, SAVETAP, Lua', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',
+				'    MACRO m arg',
+				'    ld a,arg',
+				'    ENDM',
+				'    m some_text',
+				'    DEFINE NAME game.trd',
+				'    IFDEF UNKNOWN_DEFINE',
+				'    ENDIF',
+				'    ASSERT 1, this is a message',
+				'    SAVETAP "x.tap", CODE, "name", 0, 1',
+				'    LUA',
+				'    sj.insert_define("FROM_LUA", 5)',
+				'    ENDLUA',
+				'    ld a,FROM_LUA'
+			].join('\n')
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), []);
+		assert.equal(p.getDefinitions('D:FROM_LUA').length, 1);
+		assert.equal(refKey(p, 'main.asm', 13, 'FROM_LUA'), 'D:FROM_LUA');
+	});
+
+	test('fragments not included by a program are not reported', () => {
+		const p = makeProject({
+			'main.asm': '    DEVICE ZXSPECTRUM48\n    include "used.asm"\n    call missing_in_main',
+			'used.asm': '    call missing_in_used',
+			'fragment.asm': '    call missing_in_fragment'
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written).sort(), ['missing_in_main', 'missing_in_used']);
+		// Without any program everything is reported
+		const q = makeProject({'a.asm': '    call missing_a'});
+		assert.deepEqual(q.getReportableUnresolved().map(r => r.written), ['missing_a']);
+	});
+
 	test('update after change', () => {
 		const p = makeProject({'main.asm': 'lbl: nop\n jp lbl'});
 		assert.equal(p.getReferences('L:lbl').length, 1);
