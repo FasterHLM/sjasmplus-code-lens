@@ -2,7 +2,7 @@
 
 A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://github.com/z00m128/sjasmplus), aimed mainly at ZX Spectrum development.
 
-> **Status:** early development, not published yet.
+> **Status:** preview. Bug reports and ideas are welcome in the [issues](https://github.com/kolnogorov/sjasmplus-code-lens/issues).
 
 ## Features
 
@@ -81,6 +81,7 @@ Lines inside block comments and Lua, multi-line struct initializers and lines wi
 - `npm ci`, then start "Launch Extension: open a project" in the Run and Debug view (F5). It asks for a sjasmplus project folder and opens it in an Extension Development Host window with this extension loaded.
 - `npm test` runs the unit tests of the parser and the symbol index.
 - `npm run test:integration` runs the providers inside a downloaded VS Code on the project in `tests/integration/fixture`.
+- `npm run package` builds the `.vsix` (install it with "Extensions: Install from VSIX..."), `npm run publish` publishes it to the Marketplace.
 
 ## Credits
 

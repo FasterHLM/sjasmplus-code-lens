@@ -28,8 +28,11 @@
     },
     "icon": "assets/local/icon.png",
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Formatters",
+        "Linters"
     ],
+    "preview": true,
     "activationEvents": [
         "workspaceContains:**/*.{asm,a80,z80,inc}"
     ],
@@ -459,16 +462,15 @@
         "esbuild-browser": "esbuild ./src/html/hexcalc.ts --bundle --outdir=out/html --platform=browser",
         "watch-node": "npm run esbuild-node -- --sourcemap --watch",
         "watch-browser": "npm run esbuild-browser -- --sourcemap --watch",
-        "package": "vsce package"
-    },
-    "dependencies": {
-        "path": "^0.12.7"
+        "package": "vsce package",
+        "publish": "vsce publish"
     },
     "devDependencies": {
         "@types/mocha": "10.0.0",
         "@types/node": "^18.8.2",
         "@types/vscode": "^1.71.0",
         "@vscode/test-electron": "^3.1.0",
+        "@vscode/vsce": "^3.9.2",
         "esbuild": "^0.25.0",
         "mocha": "^10.4.0",
         "source-map-support": "^0.5.21",
