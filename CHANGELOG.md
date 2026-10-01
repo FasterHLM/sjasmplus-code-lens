@@ -15,4 +15,9 @@
 - Features also work for files outside of a workspace folder.
 - Formatting ("Format Document", "Format Selection") that adapts to the style of each file: instruction and directive columns, nested code, trailing comments per group of lines; options for keyword case, commas and operand spacing.
 - Completions open when typing '.' (local labels, module members).
+- Problems for labels that are not defined; IFDEF/IFNDEF blocks that are not assembled are evaluated and dimmed; new setting `defines` for command line defines.
+- Semantic highlighting from the symbol index.
+- Defines and labels created by Lua (`sj.insert_define`, `sj.insert_label`) are known.
+- Offers to fix "files.associations" that send assembler files to another language (e.g. ASM Code Lens 2); commands "Check file associations" and "Associate assembler files with sjasmplus in this workspace".
+- Faster re-indexing.
 - Fixed: every settings change re-registered all providers, which could drop requests that were in flight.

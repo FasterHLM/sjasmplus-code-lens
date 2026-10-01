@@ -30,7 +30,9 @@
     "categories": [
         "Programming Languages"
     ],
-    "activationEvents": [],
+    "activationEvents": [
+        "workspaceContains:**/*.{asm,a80,z80,inc}"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "views": {
@@ -341,6 +343,16 @@
             {
                 "command": "sjasmplus-code-lens.find-labels-with-no-reference",
                 "title": "Find Labels with no Reference",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.check-file-associations",
+                "title": "Check file associations",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.fix-file-associations",
+                "title": "Associate assembler files with sjasmplus in this workspace",
                 "category": "sjasmplus"
             }
         ],

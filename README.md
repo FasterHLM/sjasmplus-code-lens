@@ -15,6 +15,9 @@ A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://
 - Code folding for labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF` and `LUA` blocks
 - Formatting ("Format Document", "Format Selection"), see below
 - "Find Labels with no Reference" (editor context menu) to spot dead code
+- Problems for labels that are not defined ("Label not found"), without the noise of macros, defines, blocks that are not assembled and files that no program includes
+- `IFDEF`/`IFNDEF` blocks that are not assembled are dimmed
+- Semantic highlighting: labels of code, data, constants, structs, fields, macros, defines and modules in their own colors
 - A hexadecimal calculator in the explorer and debug views
 
 ## sjasmplus aware
@@ -33,7 +36,7 @@ Renaming changes only the part of a name that belongs to the symbol, e.g. renami
 
 ## Coming from ASM Code Lens
 
-If your settings associate assembler files with the language ids of ASM Code Lens 2.x (or of another assembler extension), the files are not opened as sjasmplus. Change the associations to `sjasmplus` (and `sjasmplus-list` for listings), e.g.
+If your settings associate assembler files with the language ids of ASM Code Lens 2.x (or of another assembler extension), the files are not opened as sjasmplus. The extension notices this and offers to change the associations for the workspace or everywhere (also later with the command "sjasmplus: Check file associations"). By hand: associate the files with `sjasmplus` (and `sjasmplus-list` for listings), e.g.
 
 ```json
 "files.associations": {
@@ -50,6 +53,9 @@ All settings start with `sjasmplus-code-lens.`. The most important ones:
 |---|---|
 | `includePaths` | Directories searched for `INCLUDE` files, like `-i`/`--inc` of sjasmplus. The workspace folder is always searched. |
 | `dirbol` | Directives at the beginning of a line, like `--dirbol` of sjasmplus. |
+| `defines` | Defines set on the command line (`-D`), so the extension knows which `IFDEF` blocks are assembled. |
+| `diagnostics.unresolvedLabels` | Severity of "Label not found" problems, or `off`. |
+| `dimInactiveBlocks` | Dim `IFDEF`/`IFNDEF` blocks that are not assembled. |
 | `excludeFiles` | Glob of files to leave out of the index, e.g. `**/{old,_archive}/**`. Worth setting for folders with sources of other assemblers: they are indexed too and slow down large workspaces. |
 | `enableCodeLenses`, `enableHovering`, ... | Switch single features off. |
 

@@ -16,6 +16,7 @@ import {FoldingProvider} from './FoldingRangeProvider';
 import {FormattingProvider} from './FormattingProvider';
 import {DiagnosticsProvider} from './DiagnosticsProvider';
 import {SEMANTIC_LEGEND, SemanticTokensProvider} from './SemanticTokensProvider';
+import {checkFileAssociations, fixFileAssociations} from './AssociationCheck';
 import {LISTING_LANGUAGE, ProjectManager, SOURCE_LANGUAGE} from './projectmanager';
 
 
@@ -63,6 +64,13 @@ export function activate(context: vscode.ExtensionContext) {
         // But because I'm not sure if that would always be the case I also
         // check for the 'onDidChangeWorkspaceFolders' event.
     }));
+
+    // Assembler files associated with another language never reach this extension
+    checkFileAssociations(context).catch(e => console.log(e));
+    context.subscriptions.push(
+        vscode.commands.registerCommand('sjasmplus-code-lens.check-file-associations', () => checkFileAssociations(context, true)),
+        vscode.commands.registerCommand('sjasmplus-code-lens.fix-file-associations', (scope?: 'workspace' | 'everywhere') => fixFileAssociations(scope ?? 'workspace'))
+    );
 
     // Register commands.
     context.subscriptions.push(vscode.commands.registerCommand('sjasmplus-code-lens.find-labels-with-no-reference', async () => {
