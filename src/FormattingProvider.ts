@@ -38,7 +38,10 @@ export class FormattingProvider implements vscode.DocumentFormattingEditProvider
             commentColumn: settings.get('format.commentColumn'),
             dirbol: settings.get('dirbol')
         };
-        return formatText(document.getText(), formatOptions, fromLine, toLine).map(edit =>
-            vscode.TextEdit.replace(document.lineAt(edit.line).range, edit.text));
+        const edits = formatText(document.getText(), formatOptions, fromLine, toLine);
+        // With the default settings a consistent file stays as it is: say so
+        if (edits.length === 0)
+            vscode.window.setStatusBarMessage('sjasmplus: already formatted', 3000);
+        return edits.map(edit => vscode.TextEdit.replace(document.lineAt(edit.line).range, edit.text));
     }
 }
