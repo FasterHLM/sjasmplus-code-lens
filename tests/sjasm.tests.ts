@@ -116,6 +116,12 @@ suite('sjasm parser', () => {
 		assert.equal(parseLine(' .db 1').parsed.statements[0].opLower, 'db');
 		assert.equal(parseLine(' .4 nop').parsed.statements[0].opLower, 'nop');
 		assert.equal(parseLine('CNT=CNT+1').parsed.statements[0].opLower, '=');
+		// The '+' of DEFINE+ and DEFARRAY+ belongs to the directive
+		const r = parseLine(' DEFINE+ LEVEL 2').parsed.statements[0];
+		assert.equal(r.opLower, 'define+');
+		assert.deepEqual(r.operands.map(t => t.text), ['LEVEL', '2']);
+		assert.equal(parseLine(' .defarray+ arr 1').parsed.statements[0].opLower, 'defarray+');
+		assert.deepEqual(parseLine(' define +1').parsed.statements[0].operands.map(t => t.text), ['+', '1']);
 	});
 
 	test('dirbol', () => {
@@ -499,6 +505,18 @@ suite('sjasm project', () => {
 			'src/code.asm': code
 		}, ['src']);
 		assert.deepEqual(found.getInactiveLines(filePath('src/code.asm')), [4, 7]);
+		// The included file that defines FOO is not found: after the INCLUDE, FOO is unknown
+		const missing = makeProject({
+			'build.asm': '    include "main.asm"\n' + code,
+			'src/main.asm': '    DEFINE FOO'
+		});
+		assert.deepEqual(missing.getInactiveLines(filePath('build.asm')), [8]);
+		// DEFINE+ defines too
+		const redefine = makeProject({
+			'build.asm': '    include "main.asm"\n' + code,
+			'main.asm': '    DEFINE+ FOO'
+		});
+		assert.deepEqual(redefine.getInactiveLines(filePath('build.asm')), [5, 8]);
 	});
 
 	test('soft references: macro arguments, define values, IFDEF, ASSERT, SAVETAP, Lua', () => {

@@ -144,7 +144,14 @@ function makeStatement(tokens: Token[]): Statement {
 	// Directives may be written with a leading dot, e.g. ".db"
 	if (op.kind === TokenKind.Ident && opText.startsWith('.') && DIRECTIVES.has(opText.substring(1).toLowerCase()))
 		opText = opText.substring(1);
-	return {op, opText, opLower: opText.toLowerCase(), inhibit, operands: tokens.slice(i + 1)};
+	// DEFINE+ and DEFARRAY+ (redefine): the '+' belongs to the directive
+	let operandStart = i + 1;
+	const plus = tokens[operandStart];
+	if (op.kind === TokenKind.Ident && /^(define|defarray)$/i.test(opText) && plus?.kind === TokenKind.Punct && plus.text === '+' && plus.start === op.end) {
+		opText += '+';
+		operandStart++;
+	}
+	return {op, opText, opLower: opText.toLowerCase(), inhibit, operands: tokens.slice(operandStart)};
 }
 
 

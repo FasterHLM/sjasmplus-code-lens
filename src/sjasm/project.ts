@@ -159,7 +159,8 @@ interface WalkState {
 	 * The root is a program (or there are none): a define not seen is not
 	 * defined. Otherwise the file may be included from a context we don't
 	 * know (e.g. by an INCLUDE we could not resolve), and IFDEF of a name
-	 * that is defined somewhere in the project is unknown.
+	 * that is defined somewhere in the project is unknown. Same after an
+	 * INCLUDE of the walk that is not found.
 	 */
 	knownDefines: boolean;
 }
@@ -1025,6 +1026,8 @@ export class Project {
 				this.addInclude(fileKey(entry.path), {line, start: operand.start, end: operand.end, target: target && this.files.get(target)?.path});
 				if (target && !state.macro)
 					this.walkFile(target, state);
+				else if (!target && !this.isInactive(state))
+					state.knownDefines = false;	// The file we can't see may define names
 				return;
 			}
 			case 'dup':

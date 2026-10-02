@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+- `DEFINE+` and `DEFARRAY+` were not recognized as defines, so `IFDEF` of such a name was dimmed.
+- After an `INCLUDE` that is not found (e.g. the include path is missing in `includePaths`), `IFDEF` of a name that the project defines somewhere is no longer dimmed: the missing file may define it.
+
 ## 0.1.5
 - Hex numbers like `#4000` or `#FF0000` are no longer shown as colors with a color picker in sjasmplus files and listings (`editor.colorDecorators` is off for these languages by default).
 
