@@ -95,7 +95,18 @@ The colors come from your color theme (Ctrl+K Ctrl+T). To change single colors f
 }
 ```
 
-"Developer: Inspect Editor Tokens and Scopes" (Ctrl+Shift+P) shows the scopes and semantic token types under the cursor. Semantic colors (code labels `function`, data `variable`, constants `variable.readonly`, `struct`, `property`, `macro`, `namespace`) can be changed with `editor.semanticTokenColorCustomizations`.
+"Developer: Inspect Editor Tokens and Scopes" (Ctrl+Shift+P) shows the scopes and semantic token types under the cursor. Semantic colors (code labels `function`, data `variable`, constants `variable.readonly`, structs `struct`, fields `property`, macros `macro`, defines `macro.readonly`, modules `namespace`) can be changed with `editor.semanticTokenColorCustomizations`, e.g. macros (definitions and calls) in their own color:
+
+```json
+"editor.semanticTokenColorCustomizations": {
+    "rules": {
+        "macro:sjasmplus": { "foreground": "#FF9E3B", "bold": true },
+        "macro.readonly:sjasmplus": "#4FC1FF"
+    }
+}
+```
+
+The second rule keeps defines out (they would match `macro` too).
 
 VS Code shows hex numbers like `#4000` or `#FF0000` as colors with a color picker in any file. The extension turns this off for sjasmplus files and listings; to get it back, set `"[sjasmplus]": { "editor.colorDecorators": true }`.
 
