@@ -57,6 +57,7 @@ The key bindings are the defaults of VS Code on Windows and Linux.
 | Find dead code | Right-click in the editor > "Find Labels with no Reference". The list appears in the Output panel. |
 | Format | Shift+Alt+F for the file, Ctrl+K Ctrl+F for the selection, or `"editor.formatOnSave": true` |
 | Fold | The arrows next to the line numbers: labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF`, `LUA` |
+| Block comments | Typing `/*` adds `*/` on the next line. To turn this off: `"[sjasmplus]": { "editor.autoClosingComments": "never" }` |
 | Convert numbers | The "Hexadecimal Calculator" view in the Explorer (and in Run and Debug) |
 | Assembler in Markdown | Start a code block with ` ```sjasmplus `, ` ```z80 ` or ` ```asm ` (` ```sjasmplus-list ` for listings) |
 

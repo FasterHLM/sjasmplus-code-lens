@@ -159,6 +159,27 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		assert.equal(vscode.workspace.getConfiguration('editor', main).get('colorDecorators'), false);
 	});
 
+	test('closing of block comments can be turned off', async () => {
+		const typeComment = async () => {
+			const doc = await vscode.workspace.openTextDocument({language: 'sjasmplus', content: ''});
+			await vscode.window.showTextDocument(doc);
+			await vscode.commands.executeCommand('type', {text: '/'});
+			await vscode.commands.executeCommand('type', {text: '*'});
+			const text = doc.getText().replace(/\r\n/g, '\n');
+			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+			return text;
+		};
+		assert.equal(await typeComment(), '/*\n*/');
+		const editor = vscode.workspace.getConfiguration('editor', {languageId: 'sjasmplus'});
+		await editor.update('autoClosingComments', 'never', vscode.ConfigurationTarget.Global, true);
+		try {
+			assert.equal(await typeComment(), '/*');
+		}
+		finally {
+			await editor.update('autoClosingComments', undefined, vscode.ConfigurationTarget.Global, true);
+		}
+	});
+
 	test('code lens follows edits', async () => {
 		const editor = await vscode.window.showTextDocument(main);
 		await editor.edit(b => b.insert(new vscode.Position(10, 0), '\tcall util.clear\n'));
