@@ -519,6 +519,32 @@ suite('sjasm project', () => {
 		assert.deepEqual(redefine.getInactiveLines(filePath('build.asm')), [5, 8]);
 	});
 
+	test('INCLUDE of a file name given by a define', () => {
+		const p = makeProject({
+			'defines.asm': '    DEFINE MAIN_FILE "main.asm"\n    DEFINE LIB lib/macros.asm\n    DEFINE INDIRECT MAIN_FILE',
+			'build.asm': [
+				'    DEVICE ZXSPECTRUM48',	// 0
+				'    include "defines.asm"',	// 1
+				'    include MAIN_FILE',		// 2
+				'    include LIB',			// 3
+				'    IFNDEF LEVEL1',		// 4
+				'    nop',				// 5: inactive, LEVEL1 is defined in main.asm
+				'    ENDIF',				// 6
+				'    fill_it 5'			// 7: macro of lib/macros.asm
+			].join('\n'),
+			'main.asm': '    DEFINE LEVEL1',
+			'lib/macros.asm': '    MACRO fill_it n\n    ld a,n\n    ENDM',
+			'other.asm': '    DEVICE ZXSPECTRUM48\n    include "defines.asm"\n    include INDIRECT'
+		});
+		assert.deepEqual(p.getInactiveLines(filePath('build.asm')), [5]);
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), []);
+		assert.equal(p.includeAt(filePath('build.asm'), 2, 14)?.target, filePath('main.asm'));
+		assert.equal(p.includeAt(filePath('build.asm'), 3, 14)?.target, filePath('lib/macros.asm'));
+		assert.equal(p.includeAt(filePath('other.asm'), 2, 14)?.target, filePath('main.asm'));
+		// The define is referenced by the INCLUDE
+		assert.equal(refKey(p, 'build.asm', 2, 'MAIN_FILE'), 'D:MAIN_FILE');
+	});
+
 	test('soft references: macro arguments, define values, IFDEF, ASSERT, SAVETAP, Lua', () => {
 		const p = makeProject({
 			'main.asm': [

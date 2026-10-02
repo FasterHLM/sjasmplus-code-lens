@@ -11,7 +11,7 @@
  */
 import * as path from 'path';
 import {Token, TokenKind} from './lexer';
-import {getFileOperand, LabelField, ParsedLine, ParsedText, parseText, Statement} from './parser';
+import {FileOperand, getFileOperand, LabelField, ParsedLine, ParsedText, parseText, Statement} from './parser';
 import {BRANCHES, CONDITIONS, DATA_DIRECTIVES, DEFL_DIRECTIVES, DIRECTIVES, EQU_DIRECTIVES, MNEMONICS, NON_EXPRESSION_DIRECTIVES, PREDEFINED, REGISTERS, SAVE_DIRECTIVES, SAVE_KEYWORDS, WORD_OPERATORS} from './keywords';
 
 
@@ -145,6 +145,8 @@ interface WalkState {
 	struct?: {def: SymbolDef, fields: StructField[]};
 	/** Names substituted textually: DEFINEs and DUP index variables. */
 	defines: Set<string>;
+	/** Values of the DEFINEs seen so far. */
+	defineValues: Map<string, string>;
 	/** Set while replaying a macro body. */
 	macro?: {info: MacroInfo, params: Set<string>};
 	includeStack: string[];
@@ -207,6 +209,12 @@ const FILE_FIRST_OPERAND = new Set(['incbin', 'binary', 'insert', 'inchob', 'inc
 /** Directives that produce output: a root file with one of them is a program (not a fragment). */
 const PROGRAM_DIRECTIVES = new Set(['device', 'output', 'savesna', 'savebin', 'savetap', 'savetrd', 'savenex', 'savedev', 'savehob', 'save3dos', 'saveamsdos', 'savecdt', 'savecpcsna', 'savecpr', 'savehex', 'emptytrd', 'emptytap']);
 const MAX_INCLUDE_DEPTH = 20;
+
+
+/** The value of 'DEFINE name value': the text after the name. */
+function defineValue(line: string, operands: Token[]): string {
+	return operands.length > 1 ? line.substring(operands[1].start, operands[operands.length - 1].end) : '';
+}
 const MAX_MACRO_DEPTH = 20;
 
 
@@ -247,6 +255,8 @@ export class Project {
 	protected scopedFiles = new Set<string>();
 	/** Names of all DEFINEs of the project (see WalkState.knownDefines). */
 	protected definedNames = new Set<string>();
+	/** Values of the DEFINEs of the project, null if defined with different values. */
+	protected defineValues = new Map<string, string | null>();
 
 
 	constructor(options: ProjectOptions = {}) {
@@ -477,6 +487,8 @@ export class Project {
 		this.scopedFiles.clear();
 		this.seenOccurrence.clear();
 
+		this.collectDefinedNames();
+
 		// Find the roots: member files not included by other member files
 		const included = new Set<string>();
 		const members = [...this.files.entries()].filter(([, e]) => e.member);
@@ -488,15 +500,13 @@ export class Project {
 				for (const st of pl.statements) {
 					if (st.opLower !== 'include')
 						continue;
-					const op = getFileOperand(parsed.lines[i], st);
+					const op = getFileOperand(parsed.lines[i], st, name => this.defineValues.get(name) ?? undefined);
 					const target = op && this.resolveInclude(entry.path, op.path, op.angle);
 					if (target && target !== key)
 						included.add(target);
 				}
 			});
 		}
-
-		this.collectDefinedNames();
 
 		// Programs first: a file reached from a program and from a fragment keeps the program's view
 		const isProgram = (key: string) => this.getParsed(this.files.get(key)!).parsed.some(pl => pl.statements.some(st => PROGRAM_DIRECTIVES.has(st.opLower)));
@@ -530,9 +540,10 @@ export class Project {
 	}
 
 
-	/** Fills definedNames from the DEFINEs and Lua sj.insert_define() of all files. */
+	/** Fills definedNames (and defineValues) from the DEFINEs and Lua sj.insert_define() of all files. */
 	protected collectDefinedNames() {
 		this.definedNames.clear();
+		this.defineValues.clear();
 		for (const entry of this.files.values()) {
 			if (entry.listing)
 				continue;
@@ -545,8 +556,14 @@ export class Project {
 				}
 				for (const st of pl.statements) {
 					const name = st.operands[0];
-					if (/^(define|defarray)\+?$/.test(st.opLower) && name?.kind === TokenKind.Ident)
-						this.definedNames.add(name.text);
+					if (!/^(define|defarray)\+?$/.test(st.opLower) || name?.kind !== TokenKind.Ident)
+						continue;
+					this.definedNames.add(name.text);
+					if (st.opLower.startsWith('define')) {
+						const value = defineValue(parsed.lines[i], st.operands);
+						const known = this.defineValues.get(name.text);
+						this.defineValues.set(name.text, known === undefined || known === value ? value : null);
+					}
 				}
 			});
 		}
@@ -559,6 +576,7 @@ export class Project {
 			modules: [],
 			lastLabel: {name: '_', global: false},
 			defines: new Set(this.options.defines ?? []),
+			defineValues: new Map(),
 			includeStack: [],
 			macroDepth: 0,
 			conditions: [],
@@ -952,8 +970,11 @@ export class Project {
 						this.addResolvedRef(state, 'D:' + name, name, file, line, nameToken.start, nameToken.end);
 					else
 						this.addDef(state, {key: 'D:' + name, name, kind: 'define', written: name, file, line, start: nameToken.start, end: nameToken.end});
-					if (!this.isInactive(state))
+					if (!this.isInactive(state)) {
 						state.defines.add(name);
+						if (op.startsWith('define'))
+							state.defineValues.set(name, defineValue(lineText, operands));
+					}
 				}
 				// The value is text that is substituted later, not necessarily a label
 				state.softRefs = true;
@@ -965,8 +986,10 @@ export class Project {
 				const nameToken = operands[0];
 				if (nameToken?.kind === TokenKind.Ident) {
 					this.addPendingDefineRef(state, nameToken, file, line);
-					if (!this.isInactive(state))
+					if (!this.isInactive(state)) {
 						state.defines.delete(nameToken.text);
+						state.defineValues.delete(nameToken.text);
+					}
 				}
 				return;
 			}
@@ -1018,10 +1041,12 @@ export class Project {
 				state.conditionTaken.pop();
 				return;
 			case 'include': {
-				const operand = getFileOperand(lineText, st);
+				const operand = this.getFileOperand(lineText, st, state);
 				// A listing contains the included lines already
 				if (!operand || entry.listing)
 					return;
+				if (operand.define)
+					this.addPendingDefineRef(state, operand.define, file, line);
 				const target = this.resolveInclude(entry.path, operand.path, operand.angle);
 				this.addInclude(fileKey(entry.path), {line, start: operand.start, end: operand.end, target: target && this.files.get(target)?.path});
 				if (target && !state.macro)
@@ -1057,8 +1082,10 @@ export class Project {
 		// First operand is a file name
 		let exprOperands = operands;
 		if (FILE_FIRST_OPERAND.has(op) && operands[0]?.kind !== TokenKind.String) {
-			const fileOp = getFileOperand(lineText, st);
+			const fileOp = this.getFileOperand(lineText, st, state);
 			exprOperands = fileOp ? operands.filter(t => t.start >= fileOp.end) : operands;
+			if (fileOp?.define)
+				this.addPendingDefineRef(state, fileOp.define, file, line);
 		}
 
 		// Unknown operator: struct instance or reference to an unknown macro/label
@@ -1256,6 +1283,12 @@ export class Project {
 			this.includes.set(fk, list = []);
 		if (!list.some(l => l.line === link.line && l.start === link.start))
 			list.push(link);
+	}
+
+
+	/** The file operand of INCLUDE, INCBIN, ...; a define name is replaced by its value in the walk, else in the project. */
+	protected getFileOperand(lineText: string, st: Statement, state: WalkState): FileOperand | undefined {
+		return getFileOperand(lineText, st, name => state.defineValues.get(name) ?? this.defineValues.get(name) ?? undefined);
 	}
 
 

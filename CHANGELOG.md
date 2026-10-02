@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.7
+- `INCLUDE` with a define instead of the file name (`DEFINE MAIN_FILE "main.asm"` … `INCLUDE MAIN_FILE`) is followed like sjasmplus does. Before, the file was not found: its defines and macros were missing there, so `IFDEF` blocks were dimmed and macro calls reported as "Label not found". The same for `INCBIN` and other file directives (the define counts as referenced).
+
 ## 0.1.6
 - `DEFINE+` and `DEFARRAY+` were not recognized as defines, so `IFDEF` of such a name was dimmed.
 - After an `INCLUDE` that is not found (e.g. the include path is missing in `includePaths`), `IFDEF` of a name that the project defines somewhere is no longer dimmed: the missing file may define it.

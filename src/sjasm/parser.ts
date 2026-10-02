@@ -198,13 +198,25 @@ export function parseText(text: string, options: ParseOptions = {}): ParsedText 
 }
 
 
+export interface FileOperand {
+	path: string;
+	angle: boolean;
+	start: number;
+	end: number;
+	/** The DEFINE name written instead of the file name. */
+	define?: Token;
+}
+
+
 /**
  * Returns the file name of an INCLUDE-like statement and whether it was
  * written with angle brackets.
  * @param line The line text.
  * @param st The statement.
+ * @param defineValue Value of a DEFINE: a define name instead of the file
+ * name is replaced by its value, like sjasmplus does (also nested defines).
  */
-export function getFileOperand(line: string, st: Statement): {path: string, angle: boolean, start: number, end: number} | undefined {
+export function getFileOperand(line: string, st: Statement, defineValue?: (name: string) => string | undefined): FileOperand | undefined {
 	if (st.operands.length === 0)
 		return undefined;
 	const first = st.operands[0];
@@ -224,5 +236,18 @@ export function getFileOperand(line: string, st: Statement): {path: string, angl
 	const m = /^[^\s,;]+/.exec(line.substring(first.start));
 	if (!m)
 		return undefined;
-	return {path: m[0], angle: false, start: first.start, end: first.start + m[0].length};
+	const end = first.start + m[0].length;
+	if (defineValue && first.kind === TokenKind.Ident && end === first.end) {
+		let value: string | undefined;
+		for (let name = first.text, depth = 0; depth < 10; depth++) {
+			const next = defineValue(name)?.trim();
+			if (next === undefined)
+				break;
+			value = name = next;
+		}
+		const file = value === undefined ? undefined : /^(?:"([^"]*)"|'([^']*)'|<([^>]*)>|([^\s,;]+))/.exec(value);
+		if (file)
+			return {path: (file[1] ?? file[2] ?? file[3] ?? file[4]).trim(), angle: file[3] !== undefined, start: first.start, end, define: first};
+	}
+	return {path: m[0], angle: false, start: first.start, end};
 }
