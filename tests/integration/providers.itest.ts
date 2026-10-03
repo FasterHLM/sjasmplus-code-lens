@@ -242,6 +242,15 @@ suite('sjasmplus Code Lens in VS Code: labels made by macros, EXIST', () => {
 		assert.ok(titles.includes('3:1 reference'), titles.join(', '));
 	});
 
+	test('completion and workspace symbols offer the name made by a macro', async () => {
+		const list: vscode.CompletionList = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', macrosUri, pos(macros, 'call gb_exit', 8));
+		const item = list.items.find(i => (typeof i.label === 'string' ? i.label : i.label.label) === 'gb_exit');
+		assert.ok(item, 'gb_exit is not offered by the completion');
+		assert.ok(String(item.detail).includes('made by a macro'), String(item.detail));
+		const symbols: vscode.SymbolInformation[] = await vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', 'gb_exit');
+		assert.deepEqual(symbols.map(s => `${s.name}@${path.basename(s.location.uri.fsPath)}:${s.location.range.start.line}`), ['gb_exit@macros.asm:3']);
+	});
+
 	test('rename of a name made by a macro, and of the label it is made from, is refused', async () => {
 		for (const where of [madeName(), pos(macros, 'prefix_exit', 1)]) {
 			let refusal = '';

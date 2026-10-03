@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- The names made by macro expansions (`gb_exit` for `decode gb` of the label `tag_exit` in the macro) are offered by completions and by workspace symbols (Ctrl+T), as labels of the program. The list of unreferenced labels and the other lists are as before. Checked against the symbol tables of sjasmplus 1.24.0 on real projects and with about 3000 random macros: the names are those sjasmplus makes.
+- An expansion does not make a name in a block of the macro that is not assembled (`IFDEF`/`IFNDEF`/`ELSE` decided by the defines). Before, `call gb_b` was accepted for a label `tag_b` in the `ELSE` branch that sjasmplus skips, and the name was known to go to definition and the reference counts.
+
 ## 0.1.9
 - NASM Code Lens (ASM Code Lens 3.x) took the assembler files and the extension did nothing, without a word. On its first start it writes `"*.{asm,inc,s,nasm,yasm,-----…}": "asm-x86-nasm"` to `files.associations`; VS Code takes the longest matching entry, so it wins over `"*.asm": "sjasmplus"`, and after NASM Code Lens is uninstalled the files open as plain text. Globs of several extensions (`*.{asm,inc}`) are now recognized, and which entry wins is decided as in VS Code. The fix takes our file types out of such a glob where it is defined ("Everywhere") or overrides it in the workspace settings ("In this workspace"). The question also comes when a file opens in another language because of the settings, e.g. after another extension changed them.
 - Folding: an `IF` block (or any other block) with a label right below its first line folds again. The region of the label above ended on the `IF` line and the region of the label in the block went past `ENDIF`; VS Code drops a range that overlaps another without nesting, here the block. A label now folds up to the next label within the block it is in, and before a block it would not contain completely.
