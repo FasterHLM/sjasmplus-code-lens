@@ -65,7 +65,7 @@ The key bindings are the defaults of VS Code on Windows and Linux.
 
 References to labels that are defined nowhere are reported, like sjasmplus would. To keep this free of false alarms, these are not reported:
 
-- code in `IFDEF`/`IFNDEF` blocks that are not assembled (these are dimmed; set `defines` for the defines of your command line),
+- code in `IFDEF`/`IFNDEF` blocks that are not assembled, and in `IF`/`IFN`/`ELSEIF` blocks whose condition is known to be false (these are dimmed; set `defines` for the defines of your command line, with a value where the build gives one: `["RELEASE", "LEVEL=3"]`),
 - macro arguments and macro bodies, the values of `DEFINE`s, the text of `ASSERT` messages,
 - a label that `IF EXIST label` / `IFN EXIST label` tests, and the uses of it in the blocks of that condition (including `ELSE`): the label may be absent there by design,
 - files that no program includes. A program is a main file with `DEVICE`, `OUTPUT` or one of the `SAVE...` directives; other files are fragments, e.g. old code lying around.
@@ -154,7 +154,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 | Setting | Default | Description |
 |---|---|---|
 | `includePaths` | `[]` | Directories searched for `INCLUDE` files, like `-i`/`--inc`. Relative to the workspace folder, `${workspaceFolder}` may be used. The workspace folder itself is always searched. |
-| `defines` | `[]` | Defines of the command line (`-D`), e.g. `["_DEBUG_"]`. Used to know which `IFDEF`/`IFNDEF` blocks are assembled. |
+| `defines` | `[]` | Defines of the command line (`-D`), e.g. `["_DEBUG_", "LEVEL=3"]` (`NAME=TEXT` gives the text, `NAME` the text 1). Used to know which `IFDEF`/`IFNDEF` blocks and `IF` conditions are assembled. |
 | `dirbol` | `false` | Directives at the beginning of a line, like `--dirbol`. |
 | `excludeFiles` | `""` | Glob of files to leave out, e.g. `**/{old,_archive}/**`. Worth it for folders with sources of other assemblers: they are indexed too and slow down large workspaces. |
 
@@ -211,7 +211,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 
 ## Limitations
 
-- Conditions with expressions (`IF`, `IFN`, `IFUSED`) are not evaluated; their blocks count as assembled.
+- `IF`, `IFN` and `ELSEIF` are evaluated when everything the condition needs is known at that line: numbers, strings, `DEFINE`s (their text is put in, as sjasmplus does), `defines` of the settings and constants (`EQU`, `DEFL`) defined before, with the operators of sjasmplus (32-bit signed numbers, "true" is -1, a string is a number made of its last four characters). Values that depend on the pass or the address (`$`, `__PASS__`), labels that are not constants, a `DEFINE` made in a loop, a macro, a branch we do not know or by Lua, `DEFINE+`, and `IFUSED` are not known: such a block counts as assembled. A division by zero or any other error makes the condition unknown.
 - Labels inside macros are resolved where the macro is used. A label whose name contains a macro parameter (`tag_exit` with the parameter `tag`) is also known under the name of each expansion (`gb_exit` for `decode gb`), as a derived definition: go to definition leads to the label in the macro, and its reference count includes the uses of the expanded names. Such names cannot be renamed. Arguments that are not a name (numbers, expressions, strings) and references inside macro bodies are not substituted; names glued together by `DEFINE` substitution are not followed.
 - `OPT --syntax=...` in the source is followed for macro arguments only: with the letter `s` an argument replaces whole words, otherwise also sub-words delimited by underscores (`OPT push`/`pop`/`reset` are followed). Other syntax options and the command line (`--syntax=...`) are not known; highlighting follows the sjasmplus defaults.
 - Each listing file is indexed on its own.

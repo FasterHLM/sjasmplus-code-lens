@@ -514,10 +514,10 @@ suite('sjasm project', () => {
 				'    ENDIF',				// 6
 				'    IFDEF INNER',			// 7
 				'    call missing3',		// 8: inactive
-				'    ELSEIF 1',				// 9
-				'    call missing4',		// 10: unknown
+				'    ELSEIF 1',				// 9: the IFDEF above was not taken, 1 is true
+				'    call missing4',		// 10: active
 				'    ELSE',					// 11
-				'    call missing5',		// 12: unknown
+				'    call missing5',		// 12: inactive (a branch was taken)
 				'    ENDIF',				// 13
 				'    IFDEF CMDLINE',		// 14
 				'    call missing6',		// 15: active, defined on the command line
@@ -533,8 +533,8 @@ suite('sjasm project', () => {
 		});
 		p.setOptions({defines: ['CMDLINE']});
 		const reported = p.getReportableUnresolved().map(r => r.written).sort();
-		assert.deepEqual(reported, ['missing2', 'missing4', 'missing5', 'missing6']);
-		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [2, 3, 8, 20, 22]);
+		assert.deepEqual(reported, ['missing2', 'missing4', 'missing6']);
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [2, 3, 8, 12, 20, 22]);
 	});
 
 	test('conditional assembly: defines of other files', () => {
@@ -812,6 +812,179 @@ suite('sjasm project', () => {
 		});
 		const left = p.getReportableUnresolved();
 		assert.deepEqual(left.map(r => [r.written, r.line]), [['Optional', 11]]);
+	});
+
+	test('IF with a condition that is known: the blocks are active or inactive', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'    DEFINE Format "trd"',						// 1
+				'    IF Format = "trd" || Format = "both"',	// 2
+				'    call m_active1',								// 3
+				'    ELSE',											// 4
+				'    call m_dim1',									// 5: inactive
+				'    ENDIF',										// 6
+				'    IF Format = "tap"',							// 7
+				'    call m_dim2',									// 8: inactive
+				'    ELSEIF Format = "trd"',						// 9
+				'    call m_active2',								// 10
+				'    ELSE',											// 11
+				'    call m_dim3',									// 12: inactive (a branch was taken)
+				'    ENDIF',										// 13
+				'    IFN 0',										// 14
+				'    call m_active3',								// 15
+				'    ENDIF',										// 16
+				'    IF 0',											// 17
+				'    call m_dim4',									// 18: inactive
+				'    ENDIF'											// 19
+			].join('\n')
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written).sort(), ['m_active1', 'm_active2', 'm_active3']);
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [5, 8, 12, 18]);
+	});
+
+	test('IF with constants (EQU, DEFL), also of an included file and in a module', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'level   equ 3',									// 1
+				'step    = 1',										// 2
+				'step    = step + 1',								// 3
+				'    include "inc.asm"',							// 4
+				'    IF level > 2 && step == 2',					// 5
+				'    call m_active1',								// 6
+				'    ELSE',											// 7
+				'    call m_dim1',									// 8: inactive
+				'    ENDIF',										// 9
+				'    IF level < 2',									// 10
+				'    call m_dim2',									// 11: inactive
+				'    ENDIF',										// 12
+				'    MODULE m',										// 13
+				'local   equ 2',									// 14
+				'    IF local == 2 && level == 3',					// 15
+				'    call m_active2',								// 16
+				'    ENDIF',										// 17
+				'    IF local == 3',								// 18
+				'    call m_dim3',									// 19: inactive
+				'    ENDIF',										// 20
+				'    ENDMODULE'										// 21
+			].join('\n'),
+			'inc.asm': [
+				'    IF level == 3',								// 0
+				'    call m_in_inc',								// 1
+				'    ELSE',											// 2
+				'    call m_dim_in_inc',							// 3: inactive
+				'    ENDIF'											// 4
+			].join('\n')
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written).sort(), ['m_active1', 'm_active2', 'm_in_inc']);
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [8, 11, 19]);
+		assert.deepEqual(p.getInactiveLines(filePath('inc.asm')), [3]);
+	});
+
+	test('IF: a value that is not certain is not known (unknown branch, loop, macro, DEFINE+, Lua, macro parameter)', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'    IF unknown_label',								// 1: not known
+				'x       equ 1',									// 2
+				'    ELSE',											// 3
+				'x       equ 2',									// 4
+				'    ENDIF',										// 5
+				'    IF x == 2',									// 6: depends on the branch above
+				'    call m_branch',								// 7
+				'    ENDIF',										// 8
+				'cnt     = 0',										// 9
+				'    DUP 3',										// 10
+				'cnt     = cnt + 1',								// 11: runs three times
+				'    EDUP',											// 12
+				'    IF cnt == 3',									// 13
+				'    call m_loop',									// 14
+				'    ENDIF',										// 15
+				'    DEFINE D 1',									// 16
+				'    DEFINE+ D 2',									// 17
+				'    IF D == 1',									// 18
+				'    call m_plus',									// 19
+				'    ENDIF',										// 20
+				'    DEFINE L 1',									// 21
+				'    LUA',											// 22
+				'    sj.insert_define("L", "2")',					// 23
+				'    ENDLUA',										// 24
+				'    IF L == 1',									// 25
+				'    call m_lua',									// 26
+				'    ENDIF',										// 27
+				'    MACRO setd',									// 28
+				'    DEFINE FROM_MACRO 1',							// 29
+				'    ENDM',											// 30
+				'    setd',											// 31
+				'    IF FROM_MACRO == 2',							// 32
+				'    call m_macro',									// 33
+				'    ENDIF',										// 34
+				'    DEFINE tag 1',									// 35
+				'    MACRO usetag tag',								// 36
+				'    IF tag == 2',									// 37: the parameter, not the define
+				'    call m_param',									// 38
+				'    ENDIF',										// 39
+				'    ENDM',											// 40
+				'    usetag 2'										// 41
+			].join('\n')
+		});
+		// Nothing is known: every block counts as assembled, as before ("unknown_label" is not defined anywhere;
+		// the call in the macro body is not reported, but it would be dimmed if the define "tag" were taken for the parameter)
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written).sort(), ['m_branch', 'm_loop', 'm_lua', 'm_macro', 'm_plus', 'unknown_label']);
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), []);
+	});
+
+	test('defines of the command line with a value (-DNAME=VALUE, -DNAME is 1) decide the conditions', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'    IF LEVEL == 3 && FLAG == 1',					// 1
+				'    call m_active1',								// 2
+				'    ELSE',											// 3
+				'    call m_dim1',									// 4: inactive
+				'    ENDIF',										// 5
+				'    IF LEVEL == 2',								// 6
+				'    call m_dim2',									// 7: inactive
+				'    ENDIF',										// 8
+				'    IF NAME == "tap" || SUM == 5',					// 9
+				'    call m_active2',								// 10
+				'    ENDIF',										// 11
+				'    IF SUM == 6',									// 12: -DSUM=2+3, the text is put in
+				'    call m_dim3',									// 13: inactive
+				'    ENDIF',										// 14
+				'    IFDEF LEVEL',									// 15
+				'    call m_active3',								// 16: LEVEL is defined, not "LEVEL=3"
+				'    ENDIF',										// 17
+				'    IFDEF NOT_GIVEN',								// 18
+				'    call m_dim4',									// 19: inactive
+				'    ENDIF'											// 20
+			].join('\n')
+		});
+		p.setOptions({defines: ['LEVEL=3', 'FLAG', 'NAME="tap"', 'SUM=2+3']});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written).sort(), ['m_active1', 'm_active2', 'm_active3']);
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [4, 7, 13, 19]);
+	});
+
+	test('IF: what a block that does not run defines does not count', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'    DEFINE MODE 1',								// 1
+				'val     equ 5',									// 2
+				'    IF MODE == 2',									// 3
+				'    DEFINE MODE 3',								// 4: does not run
+				'val2    equ 9',									// 5
+				'    ENDIF',										// 6
+				'    IF MODE == 1',									// 7
+				'    call m_active',								// 8
+				'    ELSE',											// 9
+				'    call m_dim',									// 10: inactive
+				'    ENDIF'											// 11
+			].join('\n')
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), ['m_active']);
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [4, 5, 10]);
 	});
 
 	test('fragments not included by a program are not reported', () => {
