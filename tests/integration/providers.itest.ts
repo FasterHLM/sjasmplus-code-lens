@@ -204,6 +204,43 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		assert.equal(clear?.command?.title, '2 references');
 		await vscode.commands.executeCommand('workbench.action.files.revert');
 	});
+
+	test('the setting codeLensKinds chooses the symbols that get a code lens', async () => {
+		const lensLines = async (uri: vscode.Uri, expected: number[]) => {
+			let seen: number[] = [];
+			for (let i = 0; i < 50; i++) {
+				const lenses: vscode.CodeLens[] = await vscode.commands.executeCommand('vscode.executeCodeLensProvider', uri, 100);
+				seen = lenses.map(l => l.range.start.line).sort((a, b) => a - b);
+				if (seen.join() === expected.join())
+					break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			return seen;
+		};
+		// A file of the workspace, util.asm: the labels clear (line 2) and .fast (3), the constant screen.base (7)
+		// kinds.asm: a define (line 1), a label (2), a constant (3), a macro (4)
+		const kindsUri = vscode.Uri.file(path.join(fixture, 'kinds.asm'));
+		await vscode.workspace.openTextDocument(kindsUri);
+		const settings = vscode.workspace.getConfiguration('sjasmplus-code-lens');
+		assert.deepEqual(await lensLines(utilUri, [2, 3, 7]), [2, 3, 7], 'all symbols by default');
+		assert.deepEqual(await lensLines(kindsUri, [1, 2, 3, 4]), [1, 2, 3, 4], 'all symbols by default, also the define');
+		try {
+			await settings.update('codeLensKinds', ['constants'], vscode.ConfigurationTarget.Global);
+			assert.deepEqual(await lensLines(utilUri, [7]), [7], 'constants only');
+			await settings.update('codeLensKinds', ['labels'], vscode.ConfigurationTarget.Global);
+			assert.deepEqual(await lensLines(utilUri, [2, 3]), [2, 3], 'labels only');
+			await settings.update('codeLensKinds', ['labels', 'constants', 'macros'], vscode.ConfigurationTarget.Global);
+			assert.deepEqual(await lensLines(kindsUri, [2, 3, 4]), [2, 3, 4], 'everything but the defines');
+			await settings.update('codeLensKinds', ['defines'], vscode.ConfigurationTarget.Global);
+			assert.deepEqual(await lensLines(kindsUri, [1]), [1], 'defines only');
+			await settings.update('codeLensKinds', [], vscode.ConfigurationTarget.Global);
+			assert.deepEqual(await lensLines(utilUri, []), [], 'an empty list: none');
+		}
+		finally {
+			await settings.update('codeLensKinds', undefined, vscode.ConfigurationTarget.Global);
+		}
+		assert.deepEqual(await lensLines(utilUri, [2, 3, 7]), [2, 3, 7], 'back to all symbols');
+	});
 });
 
 
