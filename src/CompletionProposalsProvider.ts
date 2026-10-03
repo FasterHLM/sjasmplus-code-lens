@@ -134,11 +134,12 @@ export class CompletionProposalsProvider implements vscode.CompletionItemProvide
                 return;
             const item = new vscode.CompletionItem(text, completionKind(def));
             item.range = range;
-            item.detail = keyName(def.key) + ' — ' + kindText(def.kind);
+            item.detail = keyName(def.key) + ' — ' + kindText(def.kind) + (def.derivedFrom ? ', made by a macro' : '');
             proposals.set(text, item);
         };
 
-        for (const def of project.getAllDefinitions()) {
+        // The names made by macro expansions are labels of the program, too
+        for (const def of [...project.getAllDefinitions(), ...project.getMadeDefinitions()]) {
             if (def.kind === 'temp' || def.kind === 'module' || def.kind === 'macrolocal')
                 continue;
             const name = keyName(def.key);

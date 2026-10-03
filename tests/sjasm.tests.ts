@@ -827,6 +827,55 @@ suite('sjasm project', () => {
 		assert.deepEqual(p.getDerivedKeys('L:tag_a'), ['L:GB_a']);
 	});
 
+	test('names made by macro expansions: a list of their own, not in the list of the definitions of the source', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    MACRO decode tag',			// 1
+				'tag_exit   ret',				// 2
+				'    ENDM',						// 3
+				'    STRUCT POINT',				// 4
+				'x   BYTE',						// 5
+				'    ENDS',						// 6
+				'    decode gb',				// 7
+				'    decode xx',				// 8
+				'    decode gb',				// 9: the same name again
+				'pos POINT'					// 10: its field pos.x is not made by a macro
+			].join('\n')
+		});
+		const made = p.getMadeDefinitions();
+		assert.deepEqual(made.map(d => d.name).sort(), ['gb_exit', 'xx_exit']);
+		assert.ok(made.every(d => d.line === 2 && d.derivedFrom === 'L:tag_exit' && d.kind === 'label'), 'defined at the label in the macro');
+		assert.ok(!p.getAllDefinitions().some(d => d.name === 'gb_exit'), 'getAllDefinitions: the source only');
+		assert.deepEqual(p.getDefinitionsInFile(filePath('main.asm')).filter(d => d.name.endsWith('_exit')).map(d => d.name), ['tag_exit']);
+	});
+
+	test('names made by macro expansions: not from a branch that is not assembled (sjasmplus 1.24.0 makes only gb_a here)', () => {
+		const source = [
+			'    DEVICE ZXSPECTRUM48',		// 0
+			'    MACRO m tag',				// 1
+			'    IFNDEF small',				// 2
+			'tag_a   nop',					// 3
+			'    ELSE',						// 4
+			'tag_b   nop',					// 5
+			'    ENDIF',					// 6
+			'    IF unknown_value == 1',	// 7: not known: both branches count
+			'tag_c   nop',					// 8
+			'    ELSE',						// 9
+			'tag_d   nop',					// 10
+			'    ENDIF',					// 11
+			'    ENDM',						// 12
+			'    m gb',						// 13
+			'    call gb_a',				// 14
+			'    call gb_b'					// 15
+		].join('\n');
+		const p = makeProject({'main.asm': source});
+		assert.deepEqual(p.getMadeDefinitions().map(d => d.name).sort(), ['gb_a', 'gb_c', 'gb_d']);
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written).filter(w => w.startsWith('gb_')), ['gb_b'], 'gb_b does not exist, as in sjasmplus');
+		const small = makeProject({'main.asm': source}, [], {defines: ['small']});
+		assert.deepEqual(small.getMadeDefinitions().map(d => d.name).sort(), ['gb_b', 'gb_c', 'gb_d']);
+	});
+
 	test('macro arguments in angle brackets', () => {
 		const split = (line: string) => splitMacroArguments(line, parseLine(line).parsed.statements[0].operands);
 		assert.deepEqual(split(' m <x>, y'), ['x', 'y']);

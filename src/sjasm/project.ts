@@ -353,6 +353,8 @@ export class Project {
 	protected refsByKey = new Map<string, SymbolRef[]>();
 	protected occurrences = new Map<string, Occurrence[]>();
 	protected defsByFile = new Map<string, SymbolDef[]>();
+	/** The names made by macro expansions: they are not in defsByFile (no text of their own). */
+	protected madeDefs: SymbolDef[] = [];
 	protected includes = new Map<string, IncludeLink[]>();
 	protected scopes = new Map<string, ScopePoint[]>();
 	/**
@@ -528,6 +530,16 @@ export class Project {
 
 
 	/**
+	 * The names made by macro expansions ("gb_exit" for "decode gb" of the label "tag_exit" in the macro), unique.
+	 * They have no text of their own: each is defined at the label in the macro. Not in getAllDefinitions().
+	 */
+	public getMadeDefinitions(): SymbolDef[] {
+		this.update();
+		return uniqueByLocation(this.madeDefs);
+	}
+
+
+	/**
 	 * Unresolved references worth reporting: not in blocks that are not
 	 * assembled, not in macros or defines, and in files that belong to a
 	 * program (files no program includes are fragments, e.g. old code).
@@ -595,6 +607,7 @@ export class Project {
 		this.refsByKey.clear();
 		this.occurrences.clear();
 		this.defsByFile.clear();
+		this.madeDefs = [];
 		this.includes.clear();
 		this.scopes.clear();
 		this.inactiveLines.clear();
@@ -1085,8 +1098,9 @@ export class Project {
 
 		// A label made of a macro parameter ("tag_exit"): the expansion defines the name with
 		// the argument in it ("gb_exit"). The definition above stays the one in the source;
-		// the name of each expansion is derived from it (go to definition, reference counts).
-		if (plain && state.macro) {
+		// the name of each expansion is derived from it (go to definition, reference counts). In a block
+		// that is not assembled the expansion does not make the name (sjasmplus does not).
+		if (plain && state.macro && !this.isInactive(state)) {
 			const substituted = substituteMacroArguments(written, state.macro.args, state.wholeWordArgs);
 			if (substituted) {
 				const subName = this.withModule(state, substituted);
@@ -1592,6 +1606,8 @@ export class Project {
 				this.derived.set(def.derivedFrom, set = new Set());
 			set.add(def.key);
 		}
+		if (def.synthetic && def.kind !== 'field')
+			this.madeDefs.push(def);
 		if (!def.synthetic) {
 			const fk = fileKey(def.file);
 			let fileDefs = this.defsByFile.get(fk);

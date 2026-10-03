@@ -32,7 +32,7 @@ export class WorkspaceSymbolProvider implements vscode.WorkspaceSymbolProvider {
             const config = Config.configs.get(folders[i]?.uri.fsPath);
             if (!config?.enableWorkspaceSymbols || query.length < config.workspaceSymbolsRequiredLength)
                 return;
-            for (const def of project.getAllDefinitions()) {
+            for (const def of [...project.getAllDefinitions(), ...project.getMadeDefinitions()]) {
                 if (token.isCancellationRequested)
                     return;
                 if (!SYMBOL_KINDS.has(def.kind))
