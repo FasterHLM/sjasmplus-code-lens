@@ -100,6 +100,25 @@
                     "default": true,
                     "markdownDescription": "Enable/disable the display of code lenses ([references](https://code.visualstudio.com/docs/editor/editingevolved#_reference-information)) above labels."
                 },
+                "sjasmplus-code-lens.codeLensKinds": {
+                    "order": 32,
+                    "scope": "resource",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["labels", "constants", "structs", "macros", "defines"],
+                        "enumDescriptions": [
+                            "Labels, also the ones of data",
+                            "Constants (EQU) and variables (DEFL)",
+                            "Structs and their fields",
+                            "Macros",
+                            "Defines"
+                        ]
+                    },
+                    "default": ["labels", "constants", "structs", "macros", "defines"],
+                    "markdownDescription": "The symbols that get a code lens (the reference count), when `#sjasmplus-code-lens.enableCodeLenses#` is on. For example, leave `defines` out if most of them are read only by your build script and show `0 references`. An empty list shows none."
+                },
                 "sjasmplus-code-lens.enableHovering": {
                     "order": 41,
                     "scope": "resource",

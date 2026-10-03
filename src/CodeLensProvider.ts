@@ -16,10 +16,6 @@ class AsmCodeLens extends vscode.CodeLens {
 }
 
 
-/** Symbol kinds that get a code lens. */
-const LENS_KINDS = new Set(['label', 'data', 'equ', 'defl', 'struct', 'field', 'macro', 'define']);
-
-
 /**
  * CodeLensProvider for assembly language.
  * Shows the number of references above each label, struct, macro etc.
@@ -49,7 +45,7 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
 
         const codeLenses: vscode.CodeLens[] = [];
         for (const def of project.getDefinitionsInFile(document.fileName)) {
-            if (!LENS_KINDS.has(def.kind))
+            if (!config.codeLensKinds.has(def.kind))
                 continue;
             const range = new vscode.Range(def.line, def.start, def.line, def.end);
             codeLenses.push(new AsmCodeLens(document, range, def.key));

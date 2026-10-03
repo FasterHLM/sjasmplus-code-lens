@@ -163,6 +163,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 | Setting | Default | Description |
 |---|---|---|
 | `enableCodeLenses` | `true` | Reference counts above the labels. |
+| `codeLensKinds` | all | Which symbols get a reference count: any of `labels` (also data labels), `constants` (`EQU`, `DEFL`), `structs` (with their fields), `macros`, `defines`. Leave `defines` out, for example, if most of them are read only by your build script and show `0 references`. An empty list shows none. |
 | `enableHovering` | `true` | Comments of a definition when hovering. |
 | `enableCompletions` | `true` | Completions. |
 | `completionsRequiredLength` | `1` | Characters to type before completions are offered (not needed after a `.`). |

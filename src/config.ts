@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import {lensKinds} from './lensKinds';
 import {PackageInfo} from './packageinfo';
 
 
@@ -62,6 +63,9 @@ export class Config {
 
 	// true if code lenses should be enabled.
 	public enableCodeLenses: boolean;
+
+	// The symbol kinds that get a code lens.
+	public codeLensKinds: Set<string>;
 
 	// true if hovering should be enabled.
 	public enableHovering: boolean;
@@ -146,6 +150,7 @@ export class Config {
 		const config = new Config();
 		config.wsFolderPath = fsPath;
 		config.enableCodeLenses = settings.enableCodeLenses;
+		config.codeLensKinds = lensKinds(settings.codeLensKinds);
 		config.enableHovering = settings.enableHovering;
 		config.enableCompletions = settings.enableCompletions;
 		config.enableGotoDefinition = settings.enableGotoDefinition;
