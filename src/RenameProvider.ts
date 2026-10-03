@@ -76,6 +76,13 @@ export class RenameProvider implements vscode.RenameProvider {
                 continue;
             if (key.startsWith('T:'))
                 throw new Error('Temporary labels cannot be renamed.');
+            // Names built from a macro parameter ("tag_x" with tag=gb gives "gb_x"): a rename would
+            // change the uses but not what the macro makes (or the other way round)
+            const defs = project.getDefinitions(key);
+            if (defs.length > 0 && defs.every(d => d.synthetic && d.kind !== 'field'))
+                throw new Error('This name is made by a macro expansion from a macro parameter: rename the label in the macro or the argument of the invocation by hand.');
+            if (project.getDerivedKeys(key).some(k => project.getDefinitions(k).some(d => d.kind !== 'field')))
+                throw new Error('This label is built from a macro parameter and is used with the argument in its name: rename it by hand, together with its uses.');
             return {project, key, occurrence};
         }
         return undefined;

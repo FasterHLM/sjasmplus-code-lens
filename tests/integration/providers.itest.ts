@@ -189,3 +189,62 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		await vscode.commands.executeCommand('workbench.action.files.revert');
 	});
 });
+
+
+suite('sjasmplus Code Lens in VS Code: labels made by macros, EXIST', () => {
+	const macrosUri = vscode.Uri.file(path.join(fixture, 'macros.asm'));
+	let macros: vscode.TextDocument;
+
+	suiteSetup(async () => {
+		macros = await vscode.workspace.openTextDocument(macrosUri);
+		assert.equal(macros.languageId, 'sjasmplus');
+		const ext = vscode.extensions.getExtension('kolnogorov.sjasmplus-code-lens');
+		assert.ok(ext, 'extension not found');
+		await ext.activate();
+	});
+
+	// "call gb_exit": the label of the expansion "decode gb" of the macro label "prefix_exit"
+	const madeName = () => pos(macros, 'call gb_exit', 6);
+
+	test('go to definition leads to the label in the macro, once', async () => {
+		const defs: (vscode.Location | vscode.LocationLink)[] = await vscode.commands.executeCommand('vscode.executeDefinitionProvider', macrosUri, madeName());
+		assert.deepEqual(lines(defs), ['macros.asm:3']);
+	});
+
+	test('hover says that the name is made by a macro expansion', async () => {
+		const hovers: vscode.Hover[] = await vscode.commands.executeCommand('vscode.executeHoverProvider', macrosUri, madeName());
+		// The markdown escapes "_" as "\_": compare without the backslashes
+		const text = hovers.flatMap(h => h.contents.map(c => typeof c === 'string' ? c : c.value)).join('\n').replace(/\\/g, '');
+		assert.ok(text.includes('gb_exit'), text);
+		assert.ok(text.includes('Made by a macro expansion'), text);
+		assert.ok(!text.includes('struct'), text);
+	});
+
+	test('the reference count above the label in the macro includes the use of the made name', async () => {
+		const lenses: vscode.CodeLens[] = await vscode.commands.executeCommand('vscode.executeCodeLensProvider', macrosUri, 100);
+		const titles = lenses.map(l => `${l.range.start.line}:${l.command?.title}`);
+		assert.ok(titles.includes('3:1 reference'), titles.join(', '));
+	});
+
+	test('rename of a name made by a macro, and of the label it is made from, is refused', async () => {
+		for (const where of [madeName(), pos(macros, 'prefix_exit', 1)]) {
+			let refusal = '';
+			try {
+				await vscode.commands.executeCommand('vscode.executeDocumentRenameProvider', macrosUri, where, 'other');
+			}
+			catch (e) {
+				refusal = String(e);
+			}
+			assert.ok(refusal.includes('macro parameter'), `not refused at ${where.line}:${where.character}: '${refusal}'`);
+		}
+	});
+
+	test('diagnostics: only the real mistake, not the made name or the label tested by EXIST', async () => {
+		let diagnostics: vscode.Diagnostic[] = [];
+		for (let i = 0; i < 50 && diagnostics.length === 0; i++) {
+			await new Promise(resolve => setTimeout(resolve, 100));
+			diagnostics = vscode.languages.getDiagnostics(macrosUri);
+		}
+		assert.deepEqual(diagnostics.map(d => `${d.range.start.line}:${d.message}`), ['10:Label not found: not_defined_here']);
+	});
+});

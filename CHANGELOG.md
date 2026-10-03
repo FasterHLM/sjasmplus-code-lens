@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Labels made of a macro parameter (`tag_exit` in `MACRO decode tag`, invoked as `decode gb`) are defined for each expansion under the name sjasmplus gives them (`gb_exit`). A use of such a name outside the macro, also before the invocation, is no longer reported as "Label not found". Go to definition leads to the label in the macro and the reference count above it includes the uses of the expanded names. The arguments are bound by position; the parameter replaces the whole name and, unless `OPT --syntax=...s` was seen, the parts of it between underscores, as in sjasmplus. Arguments that cannot be part of a name are ignored. Such names are not renamable (rename would change the uses but not what the macro makes), hover says "Made by a macro expansion".
+- `IF EXIST label`, `IFN EXIST label` and `ELSEIF`: the tested label may be absent, so it is not reported, and neither are its uses in the blocks of the condition (including `ELSE`), until `ENDIF`. Other undefined labels in those blocks are still reported.
+
 ## 0.1.7
 - `INCLUDE` with a define instead of the file name (`DEFINE MAIN_FILE "main.asm"` … `INCLUDE MAIN_FILE`) is followed like sjasmplus does. Before, the file was not found: its defines and macros were missing there, so `IFDEF` blocks were dimmed and macro calls reported as "Label not found". The same for `INCBIN` and other file directives (the define counts as referenced).
 

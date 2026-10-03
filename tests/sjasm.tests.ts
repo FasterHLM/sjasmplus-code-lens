@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {scanLine, TokenKind} from '../src/sjasm/lexer';
 import {parseLine, parseText} from '../src/sjasm/parser';
-import {Project} from '../src/sjasm/project';
+import {Project, splitMacroArguments, substituteMacroArguments} from '../src/sjasm/project';
 
 
 /** Creates a project from in-memory files. The first file is 'main.asm'. */
@@ -567,6 +567,148 @@ suite('sjasm project', () => {
 		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), []);
 		assert.equal(p.getDefinitions('D:FROM_LUA').length, 1);
 		assert.equal(refKey(p, 'main.asm', 13, 'FROM_LUA'), 'D:FROM_LUA');
+	});
+
+	test('macro parameter glued into label names (default syntax: parts between underscores)', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    MACRO decode tag',			// 1
+				'tag_exit nop',				// 2
+				'    jr tag_exit',			// 3
+				'    ENDM',						// 4
+				'    call gb_exit',			// 5: before the invocation
+				'    decode gb',				// 6
+				'    call gb_exit'			// 7
+			].join('\n')
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), []);
+		assert.equal(refKey(p, 'main.asm', 5, 'gb_exit'), 'L:gb_exit');
+		assert.equal(refKey(p, 'main.asm', 7, 'gb_exit'), 'L:gb_exit');
+		const defs = p.getDefinitions('L:gb_exit');
+		assert.equal(defs.length, 1);
+		assert.equal(defs[0].derivedFrom, 'L:tag_exit');
+		assert.equal(defs[0].synthetic, true);
+		assert.deepEqual([defs[0].line, defs[0].start], [2, 0], 'located at the label in the macro body');
+		// The reference count above the label in the body: the jr in the body and both calls from outside
+		assert.equal(p.getReferences('L:tag_exit').length, 3);
+	});
+
+	test('macro parameter: whole word, parts, and names that merely contain it', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',
+				'    MACRO m tag',
+				'tag_a   nop',
+				'a_tag_b nop',
+				'tag     nop',
+				'xtag    nop',
+				'tag1    nop',
+				'    ENDM',
+				'    m GB'
+			].join('\n')
+		});
+		for (const n of ['GB_a', 'a_GB_b', 'GB'])
+			assert.equal(p.getDefinitions('L:' + n).length, 1, n);
+		for (const n of ['xGB', 'GB1'])
+			assert.equal(p.getDefinitions('L:' + n).length, 0, n);
+	});
+
+	test('macro parameters under opt --syntax=s: whole words only', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    opt --syntax=s',			// 1
+				'    MACRO m tag',				// 2
+				'tag_a   nop',					// 3
+				'tag     nop',					// 4
+				'    ENDM',						// 5
+				'    m GB',						// 6
+				'    call GB',					// 7
+				'    call GB_a'					// 8
+			].join('\n')
+		});
+		assert.equal(p.getDefinitions('L:GB').length, 1);
+		assert.equal(p.getDefinitions('L:GB_a').length, 0);
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), ['GB_a']);
+	});
+
+	test('macro parameters: several parameters and several invocations', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',
+				'    MACRO two a, b',
+				'a_b_x   nop',
+				'    ENDM',
+				'    two p, q',
+				'    two r,s',
+				'    call p_q_x',
+				'    call r_s_x'
+			].join('\n')
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), []);
+		assert.deepEqual(p.getDerivedKeys('L:a_b_x').sort(), ['L:p_q_x', 'L:r_s_x']);
+	});
+
+	test('splitMacroArguments: commas inside brackets and strings do not split', () => {
+		const split = (line: string) => {
+			const st = parseLine(line).parsed.statements[0];
+			return splitMacroArguments(line, st.operands);
+		};
+		assert.deepEqual(split(' m a, b'), ['a', 'b']);
+		assert.deepEqual(split(' m (1,2), x+y'), ['(1,2)', 'x+y']);
+		assert.deepEqual(split(' m "a,b", c'), ['"a,b"', 'c']);
+		assert.deepEqual(split(' m a,,c'), ['a', '', 'c']);
+		assert.deepEqual(split(' m'), ['']);
+	});
+
+	test('substituteMacroArguments', () => {
+		const args = new Map([['tag', 'gb'], ['n', '5']]);
+		assert.equal(substituteMacroArguments('tag_exit', args, false), 'gb_exit');
+		assert.equal(substituteMacroArguments('a_tag_b', args, false), 'a_gb_b');
+		assert.equal(substituteMacroArguments('tag', args, false), 'gb');
+		assert.equal(substituteMacroArguments('xtag', args, false), undefined);
+		assert.equal(substituteMacroArguments('tag_exit', args, true), undefined, '--syntax=s: whole words only');
+		assert.equal(substituteMacroArguments('tag', args, true), 'gb');
+		assert.equal(substituteMacroArguments('n_x', args, false), undefined, 'a label cannot start with a digit');
+		assert.equal(substituteMacroArguments('tag_x', new Map(), false), undefined);
+	});
+
+	test('macro arguments that cannot be part of a name are ignored', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',
+				'    MACRO m tag',
+				'tag_a   nop',
+				'    ENDM',
+				'    m 5',
+				'    m 1+2',
+				'    m',
+				'    m "text"'
+			].join('\n')
+		});
+		assert.deepEqual(p.getDerivedKeys('L:tag_a'), []);
+	});
+
+	test('exist: the label may be absent, also in the blocks the condition guards', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    if exist Optional',		// 1
+				'    db Optional',				// 2
+				'    endif',					// 3
+				'    if !exist Optional',		// 4
+				'    nop',						// 5
+				'    else',						// 6
+				'    db Optional',				// 7
+				'    endif',					// 8
+				'    ifn exist Optional',		// 9
+				'    endif',					// 10
+				'    db Optional'				// 11: not guarded
+			].join('\n')
+		});
+		const left = p.getReportableUnresolved();
+		assert.deepEqual(left.map(r => [r.written, r.line]), [['Optional', 11]]);
 	});
 
 	test('fragments not included by a program are not reported', () => {

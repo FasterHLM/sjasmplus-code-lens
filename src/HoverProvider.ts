@@ -68,7 +68,7 @@ export class HoverProvider implements vscode.HoverProvider {
         const where = path.basename(def.file) + ':' + (def.line + 1);
         md.appendMarkdown(`**${escape(def.derivedFrom ? def.name : keyName(def.key))}** — ${kindText(def.kind)}, ${escape(where)}\n\n`);
         if (def.derivedFrom)
-            md.appendMarkdown(`Field of struct instance, see \`${escape(keyName(def.derivedFrom))}\`\n\n`);
+            md.appendMarkdown(`${def.kind === 'field' ? 'Field of struct instance' : 'Made by a macro expansion'}, see \`${escape(keyName(def.derivedFrom))}\`\n\n`);
         if (comments.length > 0)
             md.appendMarkdown(comments.map(escape).join('  \n') + '\n\n');
         const code = lines[def.line]?.trim();

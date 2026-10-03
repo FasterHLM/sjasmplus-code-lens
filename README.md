@@ -67,6 +67,7 @@ References to labels that are defined nowhere are reported, like sjasmplus would
 
 - code in `IFDEF`/`IFNDEF` blocks that are not assembled (these are dimmed; set `defines` for the defines of your command line),
 - macro arguments and macro bodies, the values of `DEFINE`s, the text of `ASSERT` messages,
+- a label that `IF EXIST label` / `IFN EXIST label` tests, and the uses of it in the blocks of that condition (including `ELSE`): the label may be absent there by design,
 - files that no program includes. A program is a main file with `DEVICE`, `OUTPUT` or one of the `SAVE...` directives; other files are fragments, e.g. old code lying around.
 
 ### Formatting
@@ -207,8 +208,8 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 ## Limitations
 
 - Conditions with expressions (`IF`, `IFN`, `IFUSED`) are not evaluated; their blocks count as assembled.
-- Labels inside macros are resolved where the macro is used; names glued together by define substitution are not followed.
-- Syntax options of the command line (`--syntax=...`) are not known; highlighting follows the sjasmplus defaults.
+- Labels inside macros are resolved where the macro is used. A label whose name contains a macro parameter (`tag_exit` with the parameter `tag`) is also known under the name of each expansion (`gb_exit` for `decode gb`), as a derived definition: go to definition leads to the label in the macro, and its reference count includes the uses of the expanded names. Such names cannot be renamed. Arguments that are not a name (numbers, expressions, strings) and references inside macro bodies are not substituted; names glued together by `DEFINE` substitution are not followed.
+- `OPT --syntax=...` in the source is followed for macro arguments only: with the letter `s` an argument replaces whole words, otherwise also the parts of a name between underscores. Other syntax options and the command line (`--syntax=...`) are not known; highlighting follows the sjasmplus defaults.
 - Each listing file is indexed on its own.
 
 ## Feedback

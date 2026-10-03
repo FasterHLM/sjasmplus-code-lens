@@ -52,6 +52,14 @@ export class DefinitionProvider implements vscode.DefinitionProvider {
                 }
             }
         }
-        return locations;
+        // A name made by a macro expansion is defined at the same place as the label in the macro
+        const seen = new Set<string>();
+        return locations.filter(l => {
+            const id = `${l.uri.toString()}|${l.range.start.line}|${l.range.start.character}`;
+            if (seen.has(id))
+                return false;
+            seen.add(id);
+            return true;
+        });
     }
 }

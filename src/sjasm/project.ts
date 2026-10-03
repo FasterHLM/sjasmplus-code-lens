@@ -123,6 +123,8 @@ interface StructField {
 interface MacroInfo {
 	def: SymbolDef;
 	params: Set<string>;
+	/** The parameters in the order of the MACRO line (arguments are bound by position). */
+	paramList: string[];
 	file: string;
 	/** Lines of the body (first line after MACRO up to the line before ENDM). */
 	firstLine: number;
@@ -147,8 +149,22 @@ interface WalkState {
 	defines: Set<string>;
 	/** Values of the DEFINEs seen so far. */
 	defineValues: Map<string, string>;
-	/** Set while replaying a macro body. */
-	macro?: {info: MacroInfo, params: Set<string>};
+	/**
+	 * Set while replaying a macro body. 'args' are the arguments of the
+	 * invocation by parameter name (only the ones that were given).
+	 */
+	macro?: {info: MacroInfo, params: Set<string>, args: Map<string, string>};
+	/**
+	 * Like sjasmplus --syntax=s (set by OPT): macro arguments replace whole
+	 * words only. Otherwise they also replace the parts of a name between
+	 * underscores ("tag_exit" with tag=gb is "gb_exit").
+	 */
+	wholeWordArgs: boolean;
+	/**
+	 * Names that "IF EXIST name" tests: they may be absent in the blocks of
+	 * the condition. 'depth' is the nesting level of the block (ENDIF drops it).
+	 */
+	softExist: {depth: number, names: Set<string>}[];
 	includeStack: string[];
 	macroDepth: number;
 	/** Conditional assembly: true/false if known, undefined if it depends on an expression. */
@@ -216,6 +232,60 @@ function defineValue(line: string, operands: Token[]): string {
 	return operands.length > 1 ? line.substring(operands[1].start, operands[operands.length - 1].end) : '';
 }
 const MAX_MACRO_DEPTH = 20;
+
+
+/** The arguments of a macro invocation as written, split at the commas outside of brackets. */
+export function splitMacroArguments(line: string, operands: Token[]): string[] {
+	const args: string[] = [];
+	let depth = 0;
+	let from = 0;
+	const push = (end: number) => {
+		const group = operands.slice(from, end);
+		args.push(group.length > 0 ? line.substring(group[0].start, group[group.length - 1].end).trim() : '');
+	};
+	operands.forEach((t, i) => {
+		if (t.kind !== TokenKind.Punct)
+			return;
+		if (t.text === '(' || t.text === '[' || t.text === '{')
+			depth++;
+		else if (t.text === ')' || t.text === ']' || t.text === '}')
+			depth--;
+		else if (t.text === ',' && depth === 0) {
+			push(i);
+			from = i + 1;
+		}
+	});
+	push(operands.length);
+	return args;
+}
+
+
+/** What a label can look like after the substitution of a macro argument. */
+const SUBSTITUTED_NAME = /^[A-Za-z_][\w.]*$/;
+
+/**
+ * The name after sjasmplus has substituted macro arguments into it, or
+ * undefined if nothing changes (or the result cannot be a label, e.g. the
+ * argument is a number or an expression). An argument replaces the whole
+ * name and, unless 'wholeWordsOnly' (OPT --syntax=s), every part of it
+ * between underscores: "tag_a" with tag=GB is "GB_a", "xtag" is not touched.
+ */
+export function substituteMacroArguments(name: string, args: Map<string, string>, wholeWordsOnly: boolean): string | undefined {
+	if (args.size === 0)
+		return undefined;
+	let changed = false;
+	const parts = (wholeWordsOnly ? [name] : name.split('_')).map(part => {
+		const value = args.get(part);
+		if (value === undefined)
+			return part;
+		changed = true;
+		return value;
+	});
+	if (!changed)
+		return undefined;
+	const result = parts.join('_');
+	return SUBSTITUTED_NAME.test(result) ? result : undefined;
+}
 
 
 export class Project {
@@ -577,6 +647,8 @@ export class Project {
 			lastLabel: {name: '_', global: false},
 			defines: new Set(this.options.defines ?? []),
 			defineValues: new Map(),
+			wholeWordArgs: false,
+			softExist: [],
 			includeStack: [],
 			macroDepth: 0,
 			conditions: [],
@@ -724,24 +796,47 @@ export class Project {
 		const lastLine = (endLine ?? parsed.parsed.length) - 1;
 
 		if (!nameToken)
-			return {def: undefined as any, params: new Set(), file: entry.path, firstLine: i + 1, lastLine, endLine};
+			return {def: undefined as any, params: new Set(), paramList: [], file: entry.path, firstLine: i + 1, lastLine, endLine};
 		const name = nameToken.text;
 		const def = this.addDef(state, {
 			key: 'X:' + name, name, kind: 'macro', written: name,
 			file: entry.path, line: i, start: nameToken.start, end: nameToken.end
 		});
 		const paramNames = new Set<string>();
+		const paramList: string[] = [];
 		for (const t of params)
-			if (t.kind === TokenKind.Ident)
+			if (t.kind === TokenKind.Ident) {
 				paramNames.add(t.text);
-		const info: MacroInfo = {def, params: paramNames, file: entry.path, firstLine: i + 1, lastLine, endLine};
+				paramList.push(t.text);
+			}
+		const info: MacroInfo = {def, params: paramNames, paramList, file: entry.path, firstLine: i + 1, lastLine, endLine};
 		this.macros.set(name, info);
 		return info;
 	}
 
 
+	/**
+	 * The arguments of an invocation by parameter name. Arguments that are
+	 * themselves made of the parameters of the macro we are in are
+	 * substituted first, like sjasmplus does when it expands the outer macro.
+	 */
+	protected macroArguments(info: MacroInfo, lineText: string, operands: Token[], state: WalkState): Map<string, string> {
+		const args = new Map<string, string>();
+		const written = splitMacroArguments(lineText, operands);
+		info.paramList.forEach((param, i) => {
+			let value = written[i];
+			if (!value)
+				return;
+			if (state.macro)
+				value = substituteMacroArguments(value, state.macro.args, state.wholeWordArgs) ?? value;
+			args.set(param, value);
+		});
+		return args;
+	}
+
+
 	/** Replays a macro body with the state of the invocation. */
-	protected replayMacro(info: MacroInfo, state: WalkState) {
+	protected replayMacro(info: MacroInfo, state: WalkState, args = new Map<string, string>()) {
 		if (!info.def || state.macroDepth >= MAX_MACRO_DEPTH)
 			return;
 		const entry = this.files.get(fileKey(info.file));
@@ -749,7 +844,7 @@ export class Project {
 			return;
 		const parsed = this.getParsed(entry);
 		const outerMacro = state.macro;
-		state.macro = {info, params: info.params};
+		state.macro = {info, params: info.params, args};
 		state.macroDepth++;
 		const last = info.endLine ?? info.lastLine;
 		for (let i = info.firstLine; i <= last && i < parsed.parsed.length; i++) {
@@ -844,6 +939,7 @@ export class Project {
 
 		let name: string;
 		let setsLast: LastLabel | undefined;
+		let plain = false;
 		if (written.startsWith('@.')) {
 			// Regular local label (relative to the label before the macro invocation)
 			name = this.localPrefix(state) + written.substring(1);
@@ -862,11 +958,23 @@ export class Project {
 		else {
 			name = this.withModule(state, written);
 			setsLast = {name: written, global: false};
+			plain = true;
 		}
 
 		const def = this.addDef(state, {key: 'L:' + name, name, kind, written: label.text, ...loc});
 		if (setsLast)
 			state.lastLabel = setsLast;
+
+		// A label made of a macro parameter ("tag_exit"): the expansion defines the name with
+		// the argument in it ("gb_exit"). The definition above stays the one in the source;
+		// the name of each expansion is derived from it (go to definition, reference counts).
+		if (plain && state.macro) {
+			const substituted = substituteMacroArguments(written, state.macro.args, state.wholeWordArgs);
+			if (substituted) {
+				const subName = this.withModule(state, substituted);
+				this.addDef(state, {key: 'L:' + subName, name: subName, kind, written: label.text, ...loc, derivedFrom: def.key, synthetic: true});
+			}
+		}
 
 		// Struct instance: define the fields
 		if (first?.op && first.op.kind === TokenKind.Ident && !first.inhibit && !MNEMONICS.has(op) && !DIRECTIVES.has(op) && !this.macros.has(first.opText)) {
@@ -912,12 +1020,19 @@ export class Project {
 				state.softRefs = false;
 				// A listing contains the expanded lines already
 				if (!entry.listing)
-					this.replayMacro(macro, state);
+					this.replayMacro(macro, state, this.macroArguments(macro, lineText, operands, state));
 				return;
 			}
 		}
 
 		switch (op) {
+			case 'opt': {
+				// --syntax=...s: macro arguments (and defines) replace whole words only
+				const syntax = /--syntax=([A-Za-z]*)/.exec(lineText);
+				if (syntax)
+					state.wholeWordArgs = syntax[1].includes('s');
+				return;
+			}
 			case 'module': {
 				const nameToken = operands[0];
 				if (nameToken?.kind === TokenKind.Ident) {
@@ -1010,11 +1125,14 @@ export class Project {
 			case 'if':
 			case 'ifn':
 			case 'ifused':
-			case 'ifnused':
-				this.collectRefs(operands, state, file, line, false, false);
+			case 'ifnused': {
+				const existNames = this.collectRefs(operands, state, file, line, false, false);
 				state.conditions.push(undefined);
 				state.conditionTaken.push(undefined);
+				if (existNames.length > 0)
+					state.softExist.push({depth: state.conditions.length, names: new Set(existNames)});
 				return;
+			}
 			case 'else': {
 				const last = state.conditions.length - 1;
 				if (last >= 0) {
@@ -1030,7 +1148,9 @@ export class Project {
 					return;
 				// The condition is evaluated in the context of the enclosing blocks
 				state.conditions[last] = undefined;
-				this.collectRefs(operands, state, file, line, false, false);
+				const existNames = this.collectRefs(operands, state, file, line, false, false);
+				if (existNames.length > 0)
+					state.softExist.push({depth: state.conditions.length, names: new Set(existNames)});
 				const taken = state.conditionTaken[last];
 				state.conditions[last] = taken === true ? false : undefined;
 				state.conditionTaken[last] = taken === true ? true : undefined;
@@ -1039,6 +1159,7 @@ export class Project {
 			case 'endif':
 				state.conditions.pop();
 				state.conditionTaken.pop();
+				state.softExist = state.softExist.filter(e => e.depth <= state.conditions.length);
 				return;
 			case 'include': {
 				const operand = this.getFileOperand(lineText, st, state);
@@ -1128,7 +1249,10 @@ export class Project {
 	 * @param hasCondition Operands may be conditions (jp z,...), also in
 	 * multi-argument form (call x, z,y).
 	 */
-	protected collectRefs(tokens: Token[], state: WalkState, file: string, line: number, isBranch: boolean, hasCondition: boolean) {
+	protected collectRefs(tokens: Token[], state: WalkState, file: string, line: number, isBranch: boolean, hasCondition: boolean): string[] {
+		// Names tested by "exist": they may be absent, the reference is soft and so are the ones in the guarded blocks
+		const existNames: string[] = [];
+		let afterExist = false;
 		for (const t of tokens) {
 			if (t.kind === TokenKind.Number) {
 				const m = /^(\d+)_([bBfF])$/.exec(t.text) ?? (isBranch ? /^(\d+)([bBfF])$/.exec(t.text) : null);
@@ -1139,6 +1263,8 @@ export class Project {
 			if (t.kind !== TokenKind.Ident)
 				continue;
 			const lower = t.text.toLowerCase();
+			const tested = afterExist;
+			afterExist = lower === 'exist';
 			if (REGISTERS.has(lower) || WORD_OPERATORS.has(lower) || PREDEFINED.has(t.text))
 				continue;
 			if (hasCondition && CONDITIONS.has(lower))
@@ -1149,8 +1275,11 @@ export class Project {
 				this.addResolvedRef(state, 'D:' + t.text, t.text, file, line, t.start, t.end);
 				continue;
 			}
-			this.addLabelRef(state, t, file, line);
+			if (tested)
+				existNames.push(t.text);
+			this.addLabelRef(state, t, file, line, tested);
 		}
+		return existNames;
 	}
 
 
@@ -1172,14 +1301,16 @@ export class Project {
 		const ref: SymbolRef = {key, written, file, line, start, end, root: state.root};
 		if (this.isInactive(state))
 			ref.inactive = true;
-		if (state.softRefs || state.macro)
+		if (state.softRefs || state.macro || state.softExist.some(e => e.names.has(written)))
 			ref.soft = true;
 		return ref;
 	}
 
 
-	protected addLabelRef(state: WalkState, t: Token, file: string, line: number) {
+	protected addLabelRef(state: WalkState, t: Token, file: string, line: number, soft = false) {
 		const ref = this.newRef(state, t.text, file, line, t.start, t.end);
+		if (soft)
+			ref.soft = true;
 		let candidates = this.labelCandidates(t.text, state);
 		if (state.macro && t.text.startsWith('.'))
 			candidates = ['ML:' + state.macro.info.def.name + '>' + t.text, ...candidates];
