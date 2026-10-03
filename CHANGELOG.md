@@ -1,6 +1,7 @@
 # Changelog
 
-## Unreleased
+## 0.1.8
+- Code label or data (semantic colors, outline, completion): the kind of a label follows the first statement after it that assembles something, not only a directive on its own line. A label on its own line above `db`, a label in front of a macro call whose body emits `db`, and labels in front of `INCBIN` are data now. Comments, empty lines, other labels and directives that emit nothing (`IF`, `DUP`, `DISPLAY`, …) are skipped; `ORG`, `ALIGN`, `INCLUDE` and the like end the search. The rule is described in the README.
 - Labels made of a macro parameter (`tag_exit` in `MACRO decode tag`, invoked as `decode gb`) are defined for each expansion under the name sjasmplus gives them (`gb_exit`). A use of such a name outside the macro, also before the invocation, is no longer reported as "Label not found". Go to definition leads to the label in the macro and the reference count above it includes the uses of the expanded names. The arguments are bound by position; the parameter replaces the whole name and, unless `OPT --syntax=...s` is in effect (`OPT push`/`pop`/`reset` are followed), sub-words delimited by underscores, as in sjasmplus (`my_arg_x` with the parameter `my_arg`). An argument in angle brackets (`<gb>`) is the text inside. Arguments that cannot be part of a name are ignored. Such names are not renamable (rename would change the uses but not what the macro makes), hover says "Made by a macro expansion".
 - `IF EXIST label`, `IFN EXIST label` and `ELSEIF`: the tested label may be absent, so it is not reported, and neither are its uses in the blocks of the condition (including `ELSE`), until `ENDIF`. Other undefined labels in those blocks are still reported.
 

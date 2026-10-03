@@ -12,7 +12,7 @@
 import * as path from 'path';
 import {Token, TokenKind} from './lexer';
 import {FileOperand, getFileOperand, LabelField, ParsedLine, ParsedText, parseText, Statement} from './parser';
-import {BRANCHES, CONDITIONS, DATA_DIRECTIVES, DEFL_DIRECTIVES, DIRECTIVES, EQU_DIRECTIVES, MNEMONICS, NON_EXPRESSION_DIRECTIVES, PREDEFINED, REGISTERS, SAVE_DIRECTIVES, SAVE_KEYWORDS, WORD_OPERATORS} from './keywords';
+import {BINARY_DIRECTIVES, BRANCHES, CONDITIONS, DATA_DIRECTIVES, DEFL_DIRECTIVES, DIRECTIVES, EQU_DIRECTIVES, MNEMONICS, NON_EXPRESSION_DIRECTIVES, PREDEFINED, REGISTERS, SAVE_DIRECTIVES, SAVE_KEYWORDS, TRANSPARENT_DIRECTIVES, WORD_OPERATORS} from './keywords';
 
 
 export type SymbolKind = 'label' | 'data' | 'equ' | 'defl' | 'struct' | 'field' | 'macro' | 'module' | 'define' | 'temp' | 'macrolocal';
@@ -131,7 +131,13 @@ interface MacroInfo {
 	lastLine: number;
 	/** Label and statements on the ENDM line before ENDM. */
 	endLine?: number;
+	/** What the body emits first (see emitsAt), 'none' if nothing; computed on demand. */
+	emits?: Emits | 'none';
 }
+
+
+/** What a label points at: the first statement after it that emits something. */
+type Emits = 'code' | 'data' | 'other';
 
 
 interface LastLabel {
@@ -965,7 +971,7 @@ export class Project {
 			kind = 'equ';
 		else if (DEFL_DIRECTIVES.has(op))
 			kind = 'defl';
-		else if (DATA_DIRECTIVES.has(op))
+		else if (this.emitsAt(this.getParsed(entry), line, state) === 'data')
 			kind = 'data';
 
 		let name: string;
@@ -1029,6 +1035,53 @@ export class Project {
 				return {key: candidate, fields};
 		}
 		return undefined;
+	}
+
+
+	/**
+	 * What the statements from line 'from' on emit first: code (an instruction),
+	 * data (a data directive, INCBIN, a struct instance) or something else that
+	 * ends the search (ORG, ALIGN, INCLUDE ...). Empty lines, comments, labels
+	 * and directives that emit nothing are skipped, a macro call counts as its
+	 * body. Undefined if nothing follows (up to ENDM in a macro body).
+	 */
+	protected emitsAt(parsed: ParsedText, from: number, state: WalkState): Emits | undefined {
+		for (let i = from; i < parsed.parsed.length; i++) {
+			const pl = parsed.parsed[i];
+			if (pl.lua)
+				continue;
+			for (const st of pl.statements) {
+				if (st.opLower === 'endm')
+					return undefined;
+				const emits = this.statementEmits(st, state);
+				if (emits)
+					return emits;
+			}
+		}
+		return undefined;
+	}
+
+
+	protected statementEmits(st: Statement, state: WalkState): Emits | undefined {
+		const op = st.opLower;
+		if (!st.op || TRANSPARENT_DIRECTIVES.has(op))
+			return undefined;
+		if (MNEMONICS.has(op))
+			return 'code';
+		if (DATA_DIRECTIVES.has(op) || BINARY_DIRECTIVES.has(op))
+			return 'data';
+		if (st.op.kind !== TokenKind.Ident || st.inhibit || DIRECTIVES.has(op))
+			return 'other';
+		const macro = this.macros.get(st.opText);
+		if (macro?.def) {
+			if (macro.emits === undefined) {
+				const entry = this.files.get(fileKey(macro.file));
+				macro.emits = 'none';	// A macro that invokes itself
+				macro.emits = (entry && this.emitsAt(this.getParsed(entry), macro.firstLine, state)) ?? 'none';
+			}
+			return macro.emits === 'none' ? undefined : macro.emits;
+		}
+		return this.findStruct(st.opText, state) ? 'data' : 'other';
 	}
 
 

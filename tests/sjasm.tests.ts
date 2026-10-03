@@ -439,6 +439,69 @@ suite('sjasm project', () => {
 		assert.equal(p.getReferences('L:val').length, 1);
 	});
 
+	test('data or code: the first statement after the label that emits something', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    MACRO emit_data',
+				'    db 1,2,3',
+				'    ENDM',
+				'    MACRO emit_code',
+				'    ld a,b',
+				'    db 0',
+				'    ENDM',
+				'    MACRO show',
+				'    DISPLAY "x"',
+				'    ENDM',
+				'    MACRO inner',
+				'in_body',
+				'    dw 0',
+				'    ENDM',
+				'    MACRO outer',
+				'    inner',
+				'    ENDM',
+				'    MACRO self',
+				'    self',
+				'    ENDM',
+				'    STRUCT pt',
+				'x   byte 0',
+				'    ENDS',
+				'on_same_line  db 1',
+				'own_line      ; comment',
+				'',
+				'other_label',
+				'    db 2',
+				'macro_data  emit_data',
+				'macro_code  emit_code',
+				'nested      outer',
+				'silent      show',
+				'    dz "a"',
+				'table',
+				'    DUP 4',
+				'    db 0',
+				'    EDUP',
+				'guarded',
+				'    IFDEF X',
+				'    ld a,1',
+				'    ENDIF',
+				'gfx',
+				'    INCBIN "gfx.bin"',
+				'point       pt',
+				'moved',
+				'    ORG #8000',
+				'    db 0',
+				'recursive   self',
+				'code1',
+				'    nop',
+				'last'
+			].join('\n')
+		});
+		const kind = (name: string) => p.getDefinitions('L:' + name)[0]?.kind;
+		for (const n of ['on_same_line', 'own_line', 'other_label', 'macro_data', 'nested', 'silent', 'table', 'gfx', 'point', 'in_body'])
+			assert.equal(kind(n), 'data', n);
+		for (const n of ['macro_code', 'guarded', 'moved', 'recursive', 'code1', 'last'])
+			assert.equal(kind(n), 'label', n);
+	});
+
 	test('conditional assembly: inactive blocks', () => {
 		const p = makeProject({
 			'main.asm': [

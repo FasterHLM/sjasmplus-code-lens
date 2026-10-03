@@ -99,6 +99,19 @@ export const DATA_DIRECTIVES = words(`
 	dg dh dm dp ds dw dword dz hex text word
 `);
 
+/** Directives that include binary files (labels in front of them are data, too). */
+export const BINARY_DIRECTIVES = words(`incbin binary insert inchob inctrd`);
+
+/**
+ * Directives that emit nothing and leave the address alone: a label in
+ * front of them gets its kind (code or data) from what follows.
+ */
+export const TRANSPARENT_DIRECTIVES = words(`
+	assert display define define+ undefine defarray defarray+ export opt sldopt encoding
+	setbp setbreakpoint if ifn ifdef ifndef ifused ifnused else elseif endif
+	dup rept while edup endr endw lua endlua
+`);
+
 
 export function isKnownOperator(word: string): boolean {
 	const w = word.toLowerCase();

@@ -107,6 +107,8 @@ The colors come from your color theme (Ctrl+K Ctrl+T). To change single colors f
 }
 ```
 
+A label is colored as data when the first statement after it that assembles something is a data directive (`db`, `dw`, `ds`, …), `INCBIN` or a struct instance, and as a code label otherwise. That statement is looked for on the label's line, then on the next lines, skipping comments, empty lines, other labels and directives that emit nothing (`IF`/`ENDIF`, `DUP`/`EDUP`, `DISPLAY`, `ASSERT`, `DEFINE`, …). A macro call counts as the first such statement of its body. `ORG`, `ALIGN`, `INCLUDE` and other directives end the search, the label stays a code label.
+
 The second rule keeps defines out (they would match `macro` too).
 
 VS Code shows hex numbers like `#4000` or `#FF0000` as colors with a color picker in any file. The extension turns this off for sjasmplus files and listings; to get it back, set `"[sjasmplus]": { "editor.colorDecorators": true }`.
