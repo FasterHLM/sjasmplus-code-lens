@@ -263,4 +263,26 @@ suite('sjasmplus Code Lens in VS Code: labels made by macros, EXIST', () => {
 		}
 		assert.deepEqual(diagnostics.map(d => `${d.range.start.line}:${d.message}`), ['10:Label not found: not_defined_here']);
 	});
+
+	test('setting syntax "s": the name made by a macro is not made any more, and it is taken back', async () => {
+		const messages = async (expected: string[]) => {
+			let seen: string[] = [];
+			for (let i = 0; i < 50; i++) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+				seen = vscode.languages.getDiagnostics(macrosUri).map(d => `${d.range.start.line}:${d.message}`).sort();
+				if (seen.join('|') === expected.join('|'))
+					break;
+			}
+			return seen;
+		};
+		const settings = vscode.workspace.getConfiguration('sjasmplus-code-lens');
+		await settings.update('syntax', 's', vscode.ConfigurationTarget.Global);
+		try {
+			assert.deepEqual(await messages(['10:Label not found: not_defined_here', '6:Label not found: gb_exit']), ['10:Label not found: not_defined_here', '6:Label not found: gb_exit']);
+		}
+		finally {
+			await settings.update('syntax', undefined, vscode.ConfigurationTarget.Global);
+		}
+		assert.deepEqual(await messages(['10:Label not found: not_defined_here']), ['10:Label not found: not_defined_here']);
+	});
 });
