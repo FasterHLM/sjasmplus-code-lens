@@ -3,13 +3,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {scanLine, TokenKind} from '../src/sjasm/lexer';
 import {parseLine, parseText} from '../src/sjasm/parser';
-import {Project, splitMacroArguments, substituteMacroArguments} from '../src/sjasm/project';
+import {Project, ProjectOptions, splitMacroArguments, substituteMacroArguments} from '../src/sjasm/project';
 
 
 /** Creates a project from in-memory files. The first file is 'main.asm'. */
-function makeProject(files: {[name: string]: string}, includePaths: string[] = []): Project {
+function makeProject(files: {[name: string]: string}, includePaths: string[] = [], options: ProjectOptions = {}): Project {
 	const root = path.resolve('/prj');
-	const project = new Project({includePaths: includePaths.map(p => path.join(root, p))});
+	const project = new Project({...options, includePaths: includePaths.map(p => path.join(root, p))});
 	for (const [name, text] of Object.entries(files))
 		project.setFile(path.join(root, name), text);
 	return project;
@@ -768,6 +768,63 @@ suite('sjasm project', () => {
 			].join('\n')
 		});
 		assert.deepEqual(p.getDerivedKeys('L:tag_w').sort(), ['L:rr_w', 'L:vv_w']);
+	});
+
+	test('setting syntax: the letters of --syntax= of the command line, "s" means whole words from the start', () => {
+		const source = [
+			'    DEVICE ZXSPECTRUM48',		// 0
+			'    MACRO m tag',				// 1
+			'tag_a   nop',					// 2
+			'    ENDM',						// 3
+			'    m GB',						// 4
+			'    call GB_a'					// 5
+		].join('\n');
+		const unresolved = (syntax?: string) => makeProject({'main.asm': source}, [], {syntax}).getReportableUnresolved().map(r => r.written);
+		assert.deepEqual(unresolved(), [], 'not set: sub-words, as sjasmplus without --syntax');
+		assert.deepEqual(unresolved(''), [], 'empty');
+		assert.deepEqual(unresolved('abfw'), [], 'letters without s');
+		assert.deepEqual(unresolved('s'), ['GB_a']);
+		assert.deepEqual(unresolved('abfs'), ['GB_a'], 'among other letters');
+		assert.deepEqual(unresolved('--syntax=abfs'), ['GB_a'], 'the whole option as written on the command line');
+		assert.deepEqual(unresolved('  --syntax=s '), ['GB_a'], 'with white space');
+	});
+
+	test('setting syntax and OPT: letters are added, reset goes to the defaults, pop to the state saved by push (sjasmplus 1.24.0 --syntax=abfs)', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    MACRO w tag',				// 1
+				'tag_w   nop',					// 2
+				'    ENDM',						// 3
+				'    w aa',						// 4: the command line has s: whole words
+				'    opt --syntax=a',			// 5: letters are added, s stays
+				'    w bb',						// 6
+				'    opt push reset',			// 7
+				'    w cc',						// 8: reset is the defaults, sub-words
+				'    opt pop',					// 9
+				'    w dd',						// 10: back to the command line
+				'    opt reset',				// 11
+				'    w ee'						// 12: sub-words
+			].join('\n')
+		}, [], {syntax: 'abfs'});
+		assert.deepEqual(p.getDerivedKeys('L:tag_w').sort(), ['L:cc_w', 'L:ee_w']);
+	});
+
+	test('setting syntax: a change of the options is followed', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',
+				'    MACRO m tag',
+				'tag_a   nop',
+				'    ENDM',
+				'    m GB'
+			].join('\n')
+		});
+		assert.deepEqual(p.getDerivedKeys('L:tag_a'), ['L:GB_a']);
+		p.setOptions({includePaths: [], syntax: 's'});
+		assert.deepEqual(p.getDerivedKeys('L:tag_a'), []);
+		p.setOptions({includePaths: []});
+		assert.deepEqual(p.getDerivedKeys('L:tag_a'), ['L:GB_a']);
 	});
 
 	test('macro arguments in angle brackets', () => {

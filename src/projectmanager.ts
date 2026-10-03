@@ -173,6 +173,7 @@ export class ProjectManager implements vscode.Disposable {
 			includePaths,
 			dirbol: settings.get<boolean>('dirbol') ?? false,
 			defines: settings.get<string[]>('defines') ?? [],
+			syntax: settings.get<string>('syntax') ?? '',
 			readFile: filePath => this.readFileSync(filePath)
 		};
 	}

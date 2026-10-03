@@ -35,7 +35,7 @@ A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://
    }
    ```
 
-   If you build with `--dirbol`, also set `"sjasmplus-code-lens.dirbol": true`.
+   If you build with `--dirbol`, also set `"sjasmplus-code-lens.dirbol": true`. If you build with `--syntax=...s` (whole-word substitution of macro arguments), set `"sjasmplus-code-lens.syntax": "s"`: the letters of your `--syntax=`.
 
 That's it: open a source file and the reference counts appear above the labels.
 
@@ -156,6 +156,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 | `includePaths` | `[]` | Directories searched for `INCLUDE` files, like `-i`/`--inc`. Relative to the workspace folder, `${workspaceFolder}` may be used. The workspace folder itself is always searched. |
 | `defines` | `[]` | Defines of the command line (`-D`), e.g. `["_DEBUG_"]`. Used to know which `IFDEF`/`IFNDEF` blocks are assembled. |
 | `dirbol` | `false` | Directives at the beginning of a line, like `--dirbol`. |
+| `syntax` | `""` | The letters of the command line option `--syntax=`, e.g. `"abfs"` (the whole option `"--syntax=abfs"` is accepted too). Only `s` is followed: macro arguments replace whole words only, with no sub-words delimited by underscores. `OPT --syntax=...` in the source adds to it, `OPT reset` goes back to the defaults. |
 | `excludeFiles` | `""` | Glob of files to leave out, e.g. `**/{old,_archive}/**`. Worth it for folders with sources of other assemblers: they are indexed too and slow down large workspaces. |
 
 ### Features
@@ -213,7 +214,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 
 - Conditions with expressions (`IF`, `IFN`, `IFUSED`) are not evaluated; their blocks count as assembled.
 - Labels inside macros are resolved where the macro is used. A label whose name contains a macro parameter (`tag_exit` with the parameter `tag`) is also known under the name of each expansion (`gb_exit` for `decode gb`), as a derived definition: go to definition leads to the label in the macro, and its reference count includes the uses of the expanded names. Such names cannot be renamed. Arguments that are not a name (numbers, expressions, strings) and references inside macro bodies are not substituted; names glued together by `DEFINE` substitution are not followed.
-- `OPT --syntax=...` in the source is followed for macro arguments only: with the letter `s` an argument replaces whole words, otherwise also sub-words delimited by underscores (`OPT push`/`pop`/`reset` are followed). Other syntax options and the command line (`--syntax=...`) are not known; highlighting follows the sjasmplus defaults.
+- `OPT --syntax=...` in the source and the setting `syntax` (the command line `--syntax=...`) are followed for macro arguments only: with the letter `s` an argument replaces whole words, otherwise also sub-words delimited by underscores (`OPT push`/`pop`/`reset` are followed: the letters add to the command line, `reset` goes back to the defaults, as in sjasmplus). Other syntax options are not known; highlighting follows the sjasmplus defaults.
 - Each listing file is indexed on its own.
 
 ## Feedback

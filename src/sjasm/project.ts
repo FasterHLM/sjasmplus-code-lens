@@ -99,6 +99,8 @@ export interface ProjectOptions {
 	dirbol?: boolean;
 	/** Defines given on the command line (sjasmplus -D). */
 	defines?: string[];
+	/** The letters of the command line option --syntax= (e.g. "abfs"), also the whole option. */
+	syntax?: string;
 }
 
 
@@ -161,9 +163,9 @@ interface WalkState {
 	 */
 	macro?: {info: MacroInfo, params: Set<string>, args: Map<string, string>};
 	/**
-	 * Like sjasmplus --syntax=s (set by OPT): macro arguments replace whole
-	 * words only. Otherwise they also replace the parts of a name between
-	 * underscores ("tag_exit" with tag=gb is "gb_exit").
+	 * Like sjasmplus --syntax=s (set by OPT or by the option 'syntax'): macro
+	 * arguments replace whole words only. Otherwise they also replace the parts
+	 * of a name between underscores ("tag_exit" with tag=gb is "gb_exit").
 	 */
 	wholeWordArgs: boolean;
 	/** The values of wholeWordArgs saved by OPT push. */
@@ -281,6 +283,16 @@ export function splitMacroArguments(line: string, operands: Token[]): string[] {
 
 /** What a label can look like after the substitution of a macro argument. */
 const SUBSTITUTED_NAME = /^[A-Za-z_][\w.]*$/;
+
+/**
+ * True if the letters of the command line option --syntax= include "s" (whole
+ * words only, no sub-words). Written as the letters ("abfs") or as the whole
+ * option ("--syntax=abfs"); anything else is not followed.
+ */
+function syntaxWholeWords(syntax: string | undefined): boolean {
+	const m = /^\s*(?:--syntax=)?([A-Za-z]*)\s*$/.exec(syntax ?? '');
+	return m !== null && m[1].includes('s');
+}
 
 /**
  * The name after sjasmplus has substituted macro arguments into it, or
@@ -683,7 +695,7 @@ export class Project {
 			lastLabel: {name: '_', global: false},
 			defines: new Set(this.options.defines ?? []),
 			defineValues: new Map(),
-			wholeWordArgs: false,
+			wholeWordArgs: syntaxWholeWords(this.options.syntax),
 			wholeWordArgsStack: [],
 			softExist: [],
 			includeStack: [],
@@ -1113,7 +1125,8 @@ export class Project {
 			case 'opt': {
 				// --syntax=...s: macro arguments (and defines) replace whole words only. The commands
 				// push/pop/reset come before the options; pop ignores the rest of the line. The letters
-				// of --syntax only switch options on, the command line is not known (no "s" assumed).
+				// of --syntax only switch options on, also on top of the command line (the setting
+				// 'syntax' is where a walk starts); reset goes to the defaults, not to the command line.
 				const text = operands.length > 0 ? lineText.substring(operands[0].start, operands[operands.length - 1].end) : '';
 				for (const word of text.split(/\s+/)) {
 					const command = word.toLowerCase();
