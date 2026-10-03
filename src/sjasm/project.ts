@@ -160,6 +160,8 @@ interface WalkState {
 	 * underscores ("tag_exit" with tag=gb is "gb_exit").
 	 */
 	wholeWordArgs: boolean;
+	/** The values of wholeWordArgs saved by OPT push. */
+	wholeWordArgsStack: boolean[];
 	/**
 	 * Names that "IF EXIST name" tests: they may be absent in the blocks of
 	 * the condition. 'depth' is the nesting level of the block (ENDIF drops it).
@@ -234,19 +236,30 @@ function defineValue(line: string, operands: Token[]): string {
 const MAX_MACRO_DEPTH = 20;
 
 
-/** The arguments of a macro invocation as written, split at the commas outside of brackets. */
+/**
+ * The arguments of a macro invocation as written, split at the commas outside
+ * of brackets. An argument in angle brackets ("<a, b>") is the text inside.
+ */
 export function splitMacroArguments(line: string, operands: Token[]): string[] {
 	const args: string[] = [];
 	let depth = 0;
+	let angle = false;
 	let from = 0;
 	const push = (end: number) => {
-		const group = operands.slice(from, end);
+		let group = operands.slice(from, end);
+		if (group.length >= 2 && group[0].text === '<' && group[group.length - 1].text === '>')
+			group = group.slice(1, -1);
 		args.push(group.length > 0 ? line.substring(group[0].start, group[group.length - 1].end).trim() : '');
 	};
 	operands.forEach((t, i) => {
 		if (t.kind !== TokenKind.Punct)
 			return;
-		if (t.text === '(' || t.text === '[' || t.text === '{')
+		// Angle brackets only around a whole argument
+		if (angle)
+			angle = t.text !== '>';
+		else if (t.text === '<' && i === from)
+			angle = true;
+		else if (t.text === '(' || t.text === '[' || t.text === '{')
 			depth++;
 		else if (t.text === ')' || t.text === ']' || t.text === '}')
 			depth--;
@@ -267,23 +280,40 @@ const SUBSTITUTED_NAME = /^[A-Za-z_][\w.]*$/;
  * The name after sjasmplus has substituted macro arguments into it, or
  * undefined if nothing changes (or the result cannot be a label, e.g. the
  * argument is a number or an expression). An argument replaces the whole
- * name and, unless 'wholeWordsOnly' (OPT --syntax=s), every part of it
- * between underscores: "tag_a" with tag=GB is "GB_a", "xtag" is not touched.
+ * name and, unless 'wholeWordsOnly' (OPT --syntax=s), sub-words delimited by
+ * underscores: "tag_a" with tag=GB is "GB_a", "xtag" is not touched.
+ *
+ * Like ReplaceDefineInternal in sjasmplus: the name is split into runs of
+ * underscores and runs of other characters; from the start, the shortest
+ * sequence of runs that is a parameter is replaced ("my_arg_x" with the
+ * parameter my_arg), otherwise the first run is kept and the search goes on
+ * after it. Inside the name a parameter cannot start with an underscore.
  */
 export function substituteMacroArguments(name: string, args: Map<string, string>, wholeWordsOnly: boolean): string | undefined {
 	if (args.size === 0)
 		return undefined;
+	const runs = wholeWordsOnly ? [name] : name.match(/_+|[^_]+/g) ?? [];
+	let result = '';
 	let changed = false;
-	const parts = (wholeWordsOnly ? [name] : name.split('_')).map(part => {
-		const value = args.get(part);
-		if (value === undefined)
-			return part;
+	for (let i = 0; i < runs.length;) {
+		let value: string | undefined;
+		let sub = '';
+		let j = i;
+		for (; j < runs.length && value === undefined; j++) {
+			sub += runs[j];
+			if (i === 0 || !sub.startsWith('_'))
+				value = args.get(sub);
+		}
+		if (value === undefined) {
+			result += runs[i++];
+			continue;
+		}
+		result += value;
 		changed = true;
-		return value;
-	});
+		i = j;
+	}
 	if (!changed)
 		return undefined;
-	const result = parts.join('_');
 	return SUBSTITUTED_NAME.test(result) ? result : undefined;
 }
 
@@ -648,6 +678,7 @@ export class Project {
 			defines: new Set(this.options.defines ?? []),
 			defineValues: new Map(),
 			wholeWordArgs: false,
+			wholeWordArgsStack: [],
 			softExist: [],
 			includeStack: [],
 			macroDepth: 0,
@@ -1027,10 +1058,25 @@ export class Project {
 
 		switch (op) {
 			case 'opt': {
-				// --syntax=...s: macro arguments (and defines) replace whole words only
-				const syntax = /--syntax=([A-Za-z]*)/.exec(lineText);
-				if (syntax)
-					state.wholeWordArgs = syntax[1].includes('s');
+				// --syntax=...s: macro arguments (and defines) replace whole words only. The commands
+				// push/pop/reset come before the options; pop ignores the rest of the line. The letters
+				// of --syntax only switch options on, the command line is not known (no "s" assumed).
+				const text = operands.length > 0 ? lineText.substring(operands[0].start, operands[operands.length - 1].end) : '';
+				for (const word of text.split(/\s+/)) {
+					const command = word.toLowerCase();
+					if (command.startsWith('-'))
+						break;
+					if (command === 'pop') {
+						state.wholeWordArgs = state.wholeWordArgsStack.pop() ?? state.wholeWordArgs;
+						return;
+					}
+					if (command === 'push')
+						state.wholeWordArgsStack.push(state.wholeWordArgs);
+					else if (command === 'reset')
+						state.wholeWordArgs = false;
+				}
+				if (/--syntax=[A-Za-z]*s/.test(text))
+					state.wholeWordArgs = true;
 				return;
 			}
 			case 'module': {

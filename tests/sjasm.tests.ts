@@ -672,6 +672,46 @@ suite('sjasm project', () => {
 		assert.equal(substituteMacroArguments('tag', args, true), 'gb');
 		assert.equal(substituteMacroArguments('n_x', args, false), undefined, 'a label cannot start with a digit');
 		assert.equal(substituteMacroArguments('tag_x', new Map(), false), undefined);
+		// Checked with sjasmplus 1.20.3
+		const long = new Map([['my_arg', 'foo'], ['b', 'B']]);
+		assert.equal(substituteMacroArguments('my_arg', long, false), 'foo', 'a parameter with an underscore');
+		assert.equal(substituteMacroArguments('my_arg_x', long, false), 'foo_x');
+		assert.equal(substituteMacroArguments('x_my_arg', long, false), 'x_foo');
+		assert.equal(substituteMacroArguments('my', long, false), undefined);
+		assert.equal(substituteMacroArguments('_b', long, false), '_B');
+		assert.equal(substituteMacroArguments('a__b', long, false), 'a__B');
+		assert.equal(substituteMacroArguments('b.x', long, false), undefined, 'a dot does not delimit sub-words');
+		assert.equal(substituteMacroArguments('_x', new Map([['_x', 'y']]), false), 'y');
+		assert.equal(substituteMacroArguments('a_x', new Map([['_x', 'y']]), false), undefined, 'inside a name not starting with an underscore');
+	});
+
+	test('opt push/pop/reset and --syntax letters for macro arguments', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    MACRO w tag',				// 1
+				'tag_w   nop',					// 2
+				'    ENDM',						// 3
+				'    opt push --syntax=s',		// 4
+				'    w ww',						// 5
+				'    opt --syntax=a',			// 6: letters only switch options on
+				'    w xx',						// 7
+				'    opt pop',					// 8
+				'    w vv',						// 9
+				'    opt --syntax=s',			// 10
+				'    opt reset',				// 11
+				'    w rr',						// 12
+				'    call ww_w, xx_w, vv_w, rr_w'
+			].join('\n')
+		});
+		assert.deepEqual(p.getDerivedKeys('L:tag_w').sort(), ['L:rr_w', 'L:vv_w']);
+	});
+
+	test('macro arguments in angle brackets', () => {
+		const split = (line: string) => splitMacroArguments(line, parseLine(line).parsed.statements[0].operands);
+		assert.deepEqual(split(' m <x>, y'), ['x', 'y']);
+		assert.deepEqual(split(' m <p, q>, r'), ['p, q', 'r']);
+		assert.deepEqual(split(' m a<b, c>d'), ['a<b', 'c>d']);
 	});
 
 	test('macro arguments that cannot be part of a name are ignored', () => {
