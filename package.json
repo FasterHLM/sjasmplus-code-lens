@@ -297,7 +297,7 @@
                         "type": "string"
                     },
                     "default": [],
-                    "markdownDescription": "Defines set on the sjasmplus command line (`-D`), e.g. `[\"_DEBUG_\"]`. Used to know which `IFDEF`/`IFNDEF` blocks are assembled."
+                    "markdownDescription": "Defines set on the sjasmplus command line (`-D`), e.g. `[\"_DEBUG_\", \"LEVEL=3\"]`: `NAME=TEXT` gives the text, `NAME` the text 1. Used to know which `IFDEF`/`IFNDEF` blocks and which `IF` conditions are assembled."
                 },
                 "sjasmplus-code-lens.diagnostics.unresolvedLabels": {
                     "order": 108,

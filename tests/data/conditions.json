@@ -1,0 +1,2001 @@
+[
+	{
+		"expr": "0",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#10",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "$10",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0x10",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "10h",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0ah",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "%101",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0b101",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "101b",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0q7",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "00",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "#0",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1+1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2-2",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "10d",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "255 == #ff",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0xff == 255",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "$ff == 255",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0ffh == 255",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "10h == 16",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "101b == 5",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0b101 == 5",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "%101 == 5",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0q10 == 8",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "10q == 8",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "10o == 8",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "'a' == 97",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"A\" == 65",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"a\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"ab\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "4294967295 == -1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#ffffffff == -1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#80000000 < 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2147483648 < 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"trd\" = \"trd\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"trd\" == \"trd\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"trd\" = \"both\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"trd\" != \"both\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"a\" = \"a\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"a\" = \"b\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"ab\" = \"ab\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"ab\" = \"ba\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"abcd\" = \"abcd\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"abcde\" = \"abcde\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"abcde\" = \"abcdf\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"\" = \"\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"a\" = 97",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"a\" < \"b\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"trd\" = \"TRD\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"ab\"==24930",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"ab\"==25185",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"abcd\"==1633837924",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"\"==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"a\"==\"a \"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"x\"!=\"x\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"x\"!=\"y\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"b\"<\"a\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"a\" + 1 == 98",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"a\" + 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"ab\" + \"cd\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"ab\" + \"cd\" == 24930 + 25444",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"Xbcde\"==\"abcde\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"abcdeX\"==\"abcdeY\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"banana\"==\"banana\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"banana\"==\"cherry\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"banana\"==\"Banana\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"banana\"==\"banan1\"",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "\"abcdefgh\"==\"Xbcdefgh\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"abcde\"==\"bcde\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "\"xxabcd\"==\"yyabcd\"",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 = 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 == 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 != 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2 > 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 > 2",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "2 >= 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2 <= 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "-1 < 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "3 = 1+2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1+2*3 = 7",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1+2)*3 = 9",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "7/2 = 3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-7/2 = -3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "7%3 = 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "7 mod 3 = 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<<4 = 16",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "16>>2 = 4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 shl 4 = 16",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "16 shr 2 = 4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "6&3 = 2",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "6|1 = 7",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "6^3 = 5",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "~0 = -1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "~0 = #ffffffff",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "!!5",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "not 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "not 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "-7%3==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "7%-3==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "7/-2==-3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-7/-2==3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0/5==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1%2==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 && 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 && 0",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "0 || 0",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "0 || 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2 && 3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 and 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 or 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 xor 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "0 xor 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 && 0 || 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 || 0 && 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!1 || 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 = 1 && 2 = 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 = 2 || 2 = 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1==1)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1<2)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1&&1)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1&&2)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1&&2)==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(0||5)==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(0||5)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(0||5)==5",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(!0)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1 and 1)==-1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(1 and 1)==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1 or 0)==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1 xor 0)==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "((1==1)+1)==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1!=1)==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "((2>1)+(3>2))==-2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(not 0)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(~0)==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1 and 2)==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(3 and 2)==2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(3 or 4)==7",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 + 2 << 1 = 6",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 << 1 + 2 = 8",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 | 2 & 3 = 3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2 & 3 | 1 = 3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 = 1 = 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "5 > 3 > 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1 + 1 = 2 && 3 > 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-2 * -3 = 6",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "- 2 + 5 = 3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "10 - 2 - 3 = 5",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "100 / 10 / 5 = 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2 * 3 % 4 = 2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 < 2 == 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "3 & 1 == 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "3 & (1 == 1)",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1<2)==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1<2==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1<(2==1)",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1==1==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "2==2==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "0==0==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1!=2!=1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<2<3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<2<1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "3>2>1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "0<1==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1==0<1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1==1<2",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(1==1)<2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<=1==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "2>1==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "5==5<6",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "5<6==5",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1&1==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "4&4==4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "4&4=4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1|1==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2|1==3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1^1==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "6&3==2",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(6&3)==2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1==1&1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "5==5&4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "5&4==4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1|0&&0",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1||0&1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "0&&1|1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(0&&1)|1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1|2==3||0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2*3<<1==12",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "6/2*3==9",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "8>>1+1==2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<<2<5",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<<2==4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1+1<3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2<1+2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2*2>3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-3==-3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-(3)==-3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!2==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!!2==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "~1==-2",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "- 1<0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!0==1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "!0&&1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!(0&&1)",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "not 0 == 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "not (0 == 1)",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "--3==3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "+3==3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!-1==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-!1==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "low #1234 == #34",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "high #1234 == #12",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "abs -3 == 3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "not 1 and 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(not 1) and 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "not (1 and 1)",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1 and 0 or 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 or 0 and 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2 mod 2 == 0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "3 mod 2 == 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 shl 2 == 4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "4 shr 1 + 1 == 2",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "1+1 shl 1==4",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 and 1 == 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 xor 1 or 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "5 and 3 == 1",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "(5 and 3) == 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "2 or 1 == 3",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#7fffffff+1<0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#7fffffff+1==#80000000",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#ffffffff==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#80000000<0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<<31<0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-1>>1==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-1>>1==#7fffffff",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "#ffffffff>>1==#7fffffff",
+		"defines": [],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "#100000000==0",
+		"defines": [],
+		"sjasmplus": "E"
+	},
+	{
+		"expr": "2147483647+1<0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "4294967295==-1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "65536*65536==0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "#ffff*#ffff<0",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1<<32==0",
+		"defines": [],
+		"sjasmplus": "F",
+		"unknownOk": true
+	},
+	{
+		"expr": "1<<32==1",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "1/0",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "1%0",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "undefined_label",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "undefined_label = 1",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "1 +",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "(1",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "== 1",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "1 && ",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "\"trd\" <> \"both\"",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "1 <> 2",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "0 && (1/0)",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "1 || (1/0)",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "1 2",
+		"defines": [],
+		"sjasmplus": "T",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "'ab' = 1",
+		"defines": [],
+		"sjasmplus": "F",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "#100000000==0",
+		"defines": [],
+		"sjasmplus": "E",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "\"\\x41\"==\"A\"",
+		"defines": [],
+		"sjasmplus": "F",
+		"mustBeUnknown": true
+	},
+	{
+		"expr": "__SJASMPLUS__",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "__SJASMPLUS__ > 0",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "__PASS__",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "__PASS__ == 3",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "__LINE__",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "$",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "$$",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": "__DATE__",
+		"defines": [],
+		"sjasmplus": "T",
+		"unknownOk": true
+	},
+	{
+		"expr": " 1==1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 == 1",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(1==1)",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "((1==1))",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "( 1 == 1 )",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1==1 ; comment",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1==1 // c",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1==1 /* c */",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!(1==2)",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 = 1 ; x",
+		"defines": [],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "A == 2",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "A*3 == 6",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "A*3 == 4",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "(A)*3 == 6",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-A == -2",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "-A*3 == -4",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "A == A",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "A+A == 4",
+		"defines": [
+			"DEFINE A 1+1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "S == \"trd\"",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "S != \"trd\"",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "S == \"both\"",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "L == \"banana\"",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "L == \"Banana\"",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "L == \"xxnana\"",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "S = \"trd\" || S = \"both\"",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "S",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "L",
+		"defines": [
+			"DEFINE S \"trd\"",
+			"DEFINE L \"banana\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "B == 2",
+		"defines": [
+			"DEFINE A 1",
+			"DEFINE B A+1",
+			"DEFINE C B*2"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "C == 4",
+		"defines": [
+			"DEFINE A 1",
+			"DEFINE B A+1",
+			"DEFINE C B*2"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "C == 3",
+		"defines": [
+			"DEFINE A 1",
+			"DEFINE B A+1",
+			"DEFINE C B*2"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "C == 2*1+1*2",
+		"defines": [
+			"DEFINE A 1",
+			"DEFINE B A+1",
+			"DEFINE C B*2"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "X == 5",
+		"defines": [
+			"DEFINE X 5 ; five",
+			"DEFINE Y   7   ",
+			"DEFINE Z (3)"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "Y == 7",
+		"defines": [
+			"DEFINE X 5 ; five",
+			"DEFINE Y   7   ",
+			"DEFINE Z (3)"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "Z == 3",
+		"defines": [
+			"DEFINE X 5 ; five",
+			"DEFINE Y   7   ",
+			"DEFINE Z (3)"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "X+Y == 12",
+		"defines": [
+			"DEFINE X 5 ; five",
+			"DEFINE Y   7   ",
+			"DEFINE Z (3)"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "ONE",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "ZERO",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "ONE == 1",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "ZERO == 0",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!ZERO",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "!ONE",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "ONE && ZERO",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "ONE || ZERO",
+		"defines": [
+			"DEFINE ONE 1",
+			"DEFINE ZERO 0"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "FLAG",
+		"defines": [
+			"DEFINE FLAG"
+		],
+		"sjasmplus": "E"
+	},
+	{
+		"expr": "FLAG == 1",
+		"defines": [
+			"DEFINE FLAG"
+		],
+		"sjasmplus": "E"
+	},
+	{
+		"expr": "1 + FLAG",
+		"defines": [
+			"DEFINE FLAG"
+		],
+		"sjasmplus": "E"
+	},
+	{
+		"expr": "(FLAG)",
+		"defines": [
+			"DEFINE FLAG"
+		],
+		"sjasmplus": "E"
+	},
+	{
+		"expr": "Foo",
+		"defines": [
+			"DEFINE Foo 1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "foo",
+		"defines": [
+			"DEFINE Foo 1"
+		],
+		"sjasmplus": "E"
+	},
+	{
+		"expr": "FOO",
+		"defines": [
+			"DEFINE Foo 1"
+		],
+		"sjasmplus": "E"
+	},
+	{
+		"expr": "Foo == 1",
+		"defines": [
+			"DEFINE Foo 1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "R == 2",
+		"defines": [
+			"DEFINE R 1",
+			"UNDEFINE R",
+			"DEFINE R 2"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "R == 1",
+		"defines": [
+			"DEFINE R 1",
+			"UNDEFINE R",
+			"DEFINE R 2"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "A == 3",
+		"defines": [
+			"DEFINE A B",
+			"DEFINE B 3"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "B == 3",
+		"defines": [
+			"DEFINE A B",
+			"DEFINE B 3"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "ONE OP 1",
+		"defines": [
+			"DEFINE OP ==",
+			"DEFINE ONE 1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 OP ONE",
+		"defines": [
+			"DEFINE OP ==",
+			"DEFINE ONE 1"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "N == -1",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "N < 0",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "H == 16",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "H == D",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "N*N == 1",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "-N == 1",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1-N == 2",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "1 -N == 2",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "5-N == 6",
+		"defines": [
+			"DEFINE N -1",
+			"DEFINE H #10",
+			"DEFINE D 16"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "one",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "one == 1",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "eight < 16",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "sum == 9",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "sum*2 == 18",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "one && eight",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "name == \"tap\"",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "eight = one",
+		"defines": [
+			"one: EQU 1",
+			"eight: EQU 8",
+			"sum: EQU eight+one",
+			"name: EQU \"tap\""
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "v == 20",
+		"defines": [
+			"v: DEFL 1",
+			"v: DEFL v+1",
+			"v: DEFL v*10"
+		],
+		"sjasmplus": "T"
+	},
+	{
+		"expr": "v == 1",
+		"defines": [
+			"v: DEFL 1",
+			"v: DEFL v+1",
+			"v: DEFL v*10"
+		],
+		"sjasmplus": "F"
+	},
+	{
+		"expr": "v == 2",
+		"defines": [
+			"v: DEFL 1",
+			"v: DEFL v+1",
+			"v: DEFL v*10"
+		],
+		"sjasmplus": "F"
+	}
+]

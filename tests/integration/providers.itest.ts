@@ -255,7 +255,7 @@ suite('sjasmplus Code Lens in VS Code: labels made by macros, EXIST', () => {
 		}
 	});
 
-	test('diagnostics: only the real mistake, not the made name or the label tested by EXIST', async () => {
+	test('diagnostics: only the real mistake, not the made name, the label tested by EXIST or a block that is not assembled', async () => {
 		let diagnostics: vscode.Diagnostic[] = [];
 		for (let i = 0; i < 50 && diagnostics.length === 0; i++) {
 			await new Promise(resolve => setTimeout(resolve, 100));

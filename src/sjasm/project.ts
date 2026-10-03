@@ -10,6 +10,7 @@
  * references are resolved against the definitions.
  */
 import * as path from 'path';
+import {EvalEnv, evaluateCondition, evaluateExpression} from './expression';
 import {Token, TokenKind} from './lexer';
 import {FileOperand, getFileOperand, LabelField, ParsedLine, ParsedText, parseText, Statement} from './parser';
 import {BINARY_DIRECTIVES, BRANCHES, CONDITIONS, DATA_DIRECTIVES, DEFL_DIRECTIVES, DIRECTIVES, EQU_DIRECTIVES, MNEMONICS, NON_EXPRESSION_DIRECTIVES, PREDEFINED, REGISTERS, SAVE_DIRECTIVES, SAVE_KEYWORDS, TRANSPARENT_DIRECTIVES, WORD_OPERATORS} from './keywords';
@@ -155,6 +156,12 @@ interface WalkState {
 	defines: Set<string>;
 	/** Values of the DEFINEs seen so far. */
 	defineValues: Map<string, string>;
+	/** DEFINEs whose text is not known in an expression: DEFINE+, DEFARRAY, defined by Lua. */
+	opaqueDefines: Set<string>;
+	/** The values of the constants (EQU, DEFL) defined so far, by key; null if the value is not known. */
+	constants: Map<string, number | null>;
+	/** Inside DUP/REPT/WHILE: a line is walked once, but it runs many times, so what it assigns is not known. */
+	loopDepth: number;
 	/**
 	 * Set while replaying a macro body. 'args' are the arguments of the
 	 * invocation by parameter name (only the ones that were given).
@@ -677,12 +684,25 @@ export class Project {
 
 
 	protected newState(root: number): WalkState {
+		// -DNAME=VALUE gives the text VALUE, -DNAME the text 1 (like sjasmplus)
+		const defines = new Set<string>();
+		const defineValues = new Map<string, string>();
+		for (const entry of this.options.defines ?? []) {
+			const m = /^\s*([^=\s]+)\s*(?:=(.*))?$/.exec(entry);
+			if (m) {
+				defines.add(m[1]);
+				defineValues.set(m[1], m[2] === undefined ? '1' : m[2].trim());
+			}
+		}
 		return {
 			root,
 			modules: [],
 			lastLabel: {name: '_', global: false},
-			defines: new Set(this.options.defines ?? []),
-			defineValues: new Map(),
+			defines,
+			defineValues,
+			opaqueDefines: new Set(),
+			constants: new Map(),
+			loopDepth: 0,
 			wholeWordArgs: false,
 			wholeWordArgsStack: [],
 			softExist: [],
@@ -699,6 +719,47 @@ export class Project {
 	/** True inside a conditional block that is known not to be assembled. */
 	protected isInactive(state: WalkState): boolean {
 		return state.conditions.includes(false);
+	}
+
+
+	/**
+	 * True if what a line assigns is certain: it runs once (not in a loop or a macro body) and no
+	 * condition on the way is unknown (then it may or may not run).
+	 */
+	protected isCertain(state: WalkState): boolean {
+		return !state.macro && state.loopDepth === 0 && !state.conditions.includes(undefined);
+	}
+
+
+	/** What an expression needs to know: the defines and constants seen so far in this walk. */
+	protected evalEnv(state: WalkState): EvalEnv {
+		return {
+			// The parts of a name between underscores are replaced, too, unless OPT --syntax=s
+			subwords: !state.wholeWordArgs,
+			define: name => {
+				// A macro parameter is replaced by the argument first: not the define of the same name
+				if (state.macro?.params.has(name))
+					return null;
+				if (!state.defines.has(name))
+					return undefined;
+				const text = state.defineValues.get(name);
+				return text === undefined || state.opaqueDefines.has(name) ? null : text;
+			},
+			constant: name => {
+				for (const key of this.labelCandidates(name, state)) {
+					const value = state.constants.get(key);
+					if (value !== undefined)
+						return value;
+				}
+				return undefined;
+			}
+		};
+	}
+
+
+	/** True or false if the condition of an IF is known here, undefined if not. */
+	protected evaluateCondition(operands: Token[], state: WalkState): boolean | undefined {
+		return evaluateCondition(operands, this.evalEnv(state));
 	}
 
 
@@ -780,8 +841,12 @@ export class Project {
 			const loc = {file: entry.path, line, start, end: start + name.length};
 			if (m[1] === 'define') {
 				this.addDef(state, {key: 'D:' + name, name, kind: 'define', written: name, ...loc});
-				if (!this.isInactive(state))
+				if (!this.isInactive(state)) {
 					state.defines.add(name);
+					// What a Lua script gives it is not the text of an earlier DEFINE of the same name
+					state.defineValues.delete(name);
+					state.opaqueDefines.add(name);
+				}
 			}
 			else
 				this.addDef(state, {key: 'L:' + name, name, kind: 'label', written: name, ...loc});
@@ -1002,6 +1067,10 @@ export class Project {
 		if (setsLast)
 			state.lastLabel = setsLast;
 
+		// A constant: its value is known to the conditions that come later (if it is certain that and how the line runs)
+		if ((kind === 'equ' || kind === 'defl') && first && !entry.listing && !this.isInactive(state))
+			state.constants.set(def.key, this.isCertain(state) ? (evaluateExpression(first.operands, this.evalEnv(state)) ?? null) : null);
+
 		// A label made of a macro parameter ("tag_exit"): the expansion defines the name with
 		// the argument in it ("gb_exit"). The definition above stays the one in the source;
 		// the name of each expansion is derived from it (go to definition, reference counts).
@@ -1092,6 +1161,12 @@ export class Project {
 
 		if (!st.op)
 			return;
+
+		// A line in DUP/REPT/WHILE is walked once and runs many times (see isCertain)
+		if (op === 'dup' || op === 'rept' || op === 'while')
+			state.loopDepth++;
+		else if (op === 'edup' || op === 'endr' || op === 'endw')
+			state.loopDepth = Math.max(0, state.loopDepth - 1);
 
 		// Macro invocation
 		if (st.op.kind === TokenKind.Ident && !st.inhibit) {
@@ -1188,6 +1263,11 @@ export class Project {
 						state.defines.add(name);
 						if (op.startsWith('define'))
 							state.defineValues.set(name, defineValue(lineText, operands));
+						// DEFINE+ and DEFARRAY, or a DEFINE whose branch, loop or macro we cannot follow: the text is not known
+						if (op === 'define' && this.isCertain(state))
+							state.opaqueDefines.delete(name);
+						else
+							state.opaqueDefines.add(name);
 					}
 				}
 				// The value is text that is substituted later, not necessarily a label
@@ -1203,6 +1283,7 @@ export class Project {
 					if (!this.isInactive(state)) {
 						state.defines.delete(nameToken.text);
 						state.defineValues.delete(nameToken.text);
+						state.opaqueDefines.delete(nameToken.text);
 					}
 				}
 				return;
@@ -1226,8 +1307,15 @@ export class Project {
 			case 'ifused':
 			case 'ifnused': {
 				const existNames = this.collectRefs(operands, state, file, line, false, false);
-				state.conditions.push(undefined);
-				state.conditionTaken.push(undefined);
+				// IF/IFN of a condition we can evaluate: the block is known to be assembled or not (IFUSED is not evaluated)
+				let value: boolean | undefined;
+				if (op === 'if' || op === 'ifn') {
+					value = this.evaluateCondition(operands, state);
+					if (value !== undefined && op === 'ifn')
+						value = !value;
+				}
+				state.conditions.push(value);
+				state.conditionTaken.push(value);
 				if (existNames.length > 0)
 					state.softExist.push({depth: state.conditions.length, names: new Set(existNames)});
 				return;
@@ -1250,9 +1338,15 @@ export class Project {
 				const existNames = this.collectRefs(operands, state, file, line, false, false);
 				if (existNames.length > 0)
 					state.softExist.push({depth: state.conditions.length, names: new Set(existNames)});
+				// Taken before: not this one. Not taken before: the condition decides. Not known before: not known.
 				const taken = state.conditionTaken[last];
-				state.conditions[last] = taken === true ? false : undefined;
-				state.conditionTaken[last] = taken === true ? true : undefined;
+				let value: boolean | undefined;
+				if (taken === true)
+					value = false;
+				else if (taken === false)
+					value = this.evaluateCondition(operands, state);
+				state.conditions[last] = value;
+				state.conditionTaken[last] = taken === true ? true : (taken === false ? value : undefined);
 				return;
 			}
 			case 'endif':
