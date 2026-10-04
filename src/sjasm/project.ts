@@ -162,6 +162,8 @@ interface WalkState {
 	opaqueDefines: Set<string>;
 	/** The values of the constants (EQU, DEFL) defined so far, by key; null if the value is not known. */
 	constants: Map<string, number | null>;
+	/** The keys of the DEFL variables: their values change, the values of EQU do not. */
+	variables: Set<string>;
 	/** Inside DUP/REPT/WHILE: a line is walked once, but it runs many times, so what it assigns is not known. */
 	loopDepth: number;
 	/**
@@ -727,6 +729,7 @@ export class Project {
 			defineValues,
 			opaqueDefines: new Set(),
 			constants: new Map(),
+			variables: new Set(),
 			loopDepth: 0,
 			wholeWordArgs: syntaxWholeWords(this.options.syntax),
 			wholeWordArgsStack: [],
@@ -767,14 +770,18 @@ export class Project {
 					return null;
 				if (!state.defines.has(name))
 					return undefined;
+				// In a loop the body may change a define below the condition, and the next pass sees the new text
+				if (state.loopDepth > 0)
+					return null;
 				const text = state.defineValues.get(name);
 				return text === undefined || state.opaqueDefines.has(name) ? null : text;
 			},
 			constant: name => {
 				for (const key of this.labelCandidates(name, state)) {
 					const value = state.constants.get(key);
+					// In a loop the body may change a variable below the condition, and the next pass sees the new value
 					if (value !== undefined)
-						return value;
+						return state.loopDepth > 0 && state.variables.has(key) ? null : value;
 				}
 				return undefined;
 			}
@@ -1093,8 +1100,11 @@ export class Project {
 			state.lastLabel = setsLast;
 
 		// A constant: its value is known to the conditions that come later (if it is certain that and how the line runs)
-		if ((kind === 'equ' || kind === 'defl') && first && !entry.listing && !this.isInactive(state))
+		if ((kind === 'equ' || kind === 'defl') && first && !entry.listing && !this.isInactive(state)) {
 			state.constants.set(def.key, this.isCertain(state) ? (evaluateExpression(first.operands, this.evalEnv(state)) ?? null) : null);
+			if (kind === 'defl')
+				state.variables.add(def.key);
+		}
 
 		// A label made of a macro parameter ("tag_exit"): the expansion defines the name with
 		// the argument in it ("gb_exit"). The definition above stays the one in the source;
@@ -1392,8 +1402,14 @@ export class Project {
 				this.addInclude(fileKey(entry.path), {line, start: operand.start, end: operand.end, target: target && this.files.get(target)?.path});
 				if (target && !state.macro)
 					this.walkFile(target, state);
-				else if (!target && !this.isInactive(state))
+				else if (!target && !this.isInactive(state)) {
 					state.knownDefines = false;	// The file we can't see may define names
+					// ... and change the variables (DEFL) and the text of the defines
+					for (const key of state.variables)
+						state.constants.set(key, null);
+					for (const name of state.defines)
+						state.opaqueDefines.add(name);
+				}
 				return;
 			}
 			case 'dup':

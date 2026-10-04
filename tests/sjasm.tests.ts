@@ -988,6 +988,95 @@ suite('sjasm project', () => {
 		assert.deepEqual(p.getInactiveLines(filePath('inc.asm')), [3]);
 	});
 
+	test('IF in DUP/REPT/WHILE: what the loop changes is not known, the body runs many times (sjasmplus 1.24.0 assembles the ELSE branch in the 2nd and 3rd pass)', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'cnt     = 0',										// 1
+				'    DUP 3',										// 2
+				'    IF cnt == 0',									// 3: true in the first pass only
+				'    nop',											// 4
+				'    ELSE',											// 5
+				'    call in_dup',									// 6: runs in the 2nd and 3rd pass
+				'    ENDIF',										// 7
+				'cnt     = cnt + 1',								// 8
+				'    EDUP',											// 9
+				'n       = 0',										// 10
+				'    REPT 2',										// 11
+				'    IFN n',										// 12
+				'    call in_rept',									// 13
+				'    ENDIF',										// 14
+				'n       = 1',										// 15
+				'    ENDR',											// 16
+				'w       = 0',										// 17
+				'    WHILE w < 2',									// 18
+				'    IF w == 0',									// 19
+				'    nop',											// 20
+				'    ELSEIF w == 1',								// 21
+				'    call in_while',								// 22
+				'    ENDIF',										// 23
+				'w       = w + 1',									// 24
+				'    ENDW',											// 25
+				'in_dup',											// 26
+				'in_rept',											// 27
+				'in_while'											// 28
+			].join('\n')
+		});
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [], 'nothing is dimmed: each branch runs in some pass');
+	});
+
+	test('IF in a loop: what cannot change is still known (numbers, EQU), what can change is not (DEFL, DEFINE)', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'fixed   equ 1',									// 1
+				'var     = 1',										// 2
+				'    DEFINE D 1',									// 3
+				'    DUP 2',										// 4
+				'    IF fixed == 2',								// 5: EQU: false in every pass
+				'    call never_equ',								// 6
+				'    ENDIF',										// 7
+				'    IF 1 == 2',									// 8: a number
+				'    call never_number',							// 9
+				'    ENDIF',										// 10
+				'    IF var == 2',									// 11: DEFL: it could change in the loop
+				'    call maybe_defl',								// 12
+				'    ENDIF',										// 13
+				'    IF D == 2',									// 14: DEFINE: the same
+				'    call maybe_define',							// 15
+				'    ENDIF',										// 16
+				'    EDUP',											// 17
+				'    IF var == 2',									// 18: after the loop it is known again
+				'    call after_loop',								// 19
+				'    ENDIF'											// 20
+			].join('\n')
+		});
+		// the bodies of the conditions that are false in every pass (6, 9) and the one after the loop (19)
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [6, 9, 19]);
+	});
+
+	test('IF after an INCLUDE that is not found: the values of DEFL and DEFINE are forgotten (the file may change them), EQU stays', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'fixed   equ 1',									// 1
+				'var     = 1',										// 2
+				'    DEFINE D 1',									// 3
+				'    INCLUDE "not_here.asm"',						// 4
+				'    IF fixed == 2',								// 5: still false
+				'    call never_equ',								// 6
+				'    ENDIF',										// 7
+				'    IF var == 2',									// 8: the file may have set it
+				'    call maybe_defl',								// 9
+				'    ENDIF',										// 10
+				'    IF D == 2',									// 11: the same
+				'    call maybe_define',							// 12
+				'    ENDIF'											// 13
+			].join('\n')
+		});
+		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [6], 'only the body of the EQU condition');
+	});
+
 	test('IF: a value that is not certain is not known (unknown branch, loop, macro, DEFINE+, Lua, macro parameter)', () => {
 		const p = makeProject({
 			'main.asm': [
