@@ -313,7 +313,7 @@
                     "scope": "resource",
                     "type": "string",
                     "default": "",
-                    "markdownDescription": "The letters of the sjasmplus command line option `--syntax=`, e.g. `abfw` or `s` (the whole option `--syntax=abfw` is accepted too). Only `s` matters: macro arguments replace whole words only, no sub-words delimited by underscores. `OPT --syntax=...` in the source adds to it and `OPT reset` goes back to the defaults, as in sjasmplus."
+                    "markdownDescription": "The letters of the sjasmplus command line option `--syntax=`, e.g. `abfw` or `s` (the whole option `--syntax=abfw` is accepted too). Only `s` matters: macro arguments replace whole words only, no sub-words delimited by underscores. `OPT --syntax=...` in the source adds to it and `OPT reset` goes back to the defaults, as in sjasmplus. The letter `s` works with sjasmplus 1.18.3 or later; sjasmplus 1.18.2 ignores it."
                 },
                 "sjasmplus-code-lens.defines": {
                     "order": 107,

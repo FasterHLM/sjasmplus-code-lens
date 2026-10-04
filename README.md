@@ -156,7 +156,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 | `includePaths` | `[]` | Directories searched for `INCLUDE` files, like `-i`/`--inc`. Relative to the workspace folder, `${workspaceFolder}` may be used. The workspace folder itself is always searched. |
 | `defines` | `[]` | Defines of the command line (`-D`), e.g. `["_DEBUG_", "LEVEL=3"]` (`NAME=TEXT` gives the text, `NAME` the text 1). Used to know which `IFDEF`/`IFNDEF` blocks and `IF` conditions are assembled. |
 | `dirbol` | `false` | Directives at the beginning of a line, like `--dirbol`. |
-| `syntax` | `""` | The letters of the command line option `--syntax=`, e.g. `"abfs"` (the whole option `"--syntax=abfs"` is accepted too). Only `s` is followed: macro arguments replace whole words only, with no sub-words delimited by underscores. `OPT --syntax=...` in the source adds to it, `OPT reset` goes back to the defaults. |
+| `syntax` | `""` | The letters of the command line option `--syntax=`, e.g. `"abfs"` (the whole option `"--syntax=abfs"` is accepted too). Only `s` is followed: macro arguments replace whole words only, with no sub-words delimited by underscores. `OPT --syntax=...` in the source adds to it, `OPT reset` goes back to the defaults. The letter `s` works with sjasmplus 1.18.3 or later; sjasmplus 1.18.2 ignores it. |
 | `excludeFiles` | `""` | Glob of files to leave out, e.g. `**/{old,_archive}/**`. Worth it for folders with sources of other assemblers: they are indexed too and slow down large workspaces. |
 
 ### Features
