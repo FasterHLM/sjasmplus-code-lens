@@ -361,6 +361,51 @@
                 "command": "sjasmplus-code-lens.fix-file-associations",
                 "title": "Associate assembler files with sjasmplus in this workspace",
                 "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.dezog.movePCtoCursor",
+                "title": "Move Program Counter to Cursor",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.code",
+                "title": "Code",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.data",
+                "title": "Data",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.string",
+                "title": "String",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.disassembly",
+                "title": "Smart Disassembly",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.flowChart",
+                "title": "Flow Chart",
+                "category": "sjasmplus"
+            },
+            {
+                "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.callGraph",
+                "title": "Call Graph",
+                "category": "sjasmplus"
+            }
+        ],
+        "submenus": [
+            {
+                "id": "sjasmplus-code-lens.dezog.disassemblyAtCursor",
+                "label": "Disassembly at Cursor / of Selection"
+            },
+            {
+                "id": "sjasmplus-code-lens.dezog.analyzeAtCursor",
+                "label": "Analyze at Cursor"
             }
         ],
         "menus": {
@@ -369,11 +414,76 @@
                     "when": "resourceLangId == sjasmplus || resourceLangId == sjasmplus-list",
                     "command": "sjasmplus-code-lens.find-labels-with-no-reference",
                     "group": "0_navigation@10"
+                },
+                {
+                    "when": "debugType == dezog && resourceLangId == sjasmplus || debugType == dezog && resourceLangId == sjasmplus-list",
+                    "command": "sjasmplus-code-lens.dezog.movePCtoCursor",
+                    "group": "debug"
+                },
+                {
+                    "when": "debugType == dezog && resourceLangId == sjasmplus || debugType == dezog && resourceLangId == sjasmplus-list",
+                    "submenu": "sjasmplus-code-lens.dezog.disassemblyAtCursor",
+                    "group": "debug"
+                },
+                {
+                    "when": "debugType == dezog && resourceLangId == sjasmplus || debugType == dezog && resourceLangId == sjasmplus-list",
+                    "submenu": "sjasmplus-code-lens.dezog.analyzeAtCursor",
+                    "group": "debug"
+                }
+            ],
+            "sjasmplus-code-lens.dezog.disassemblyAtCursor": [
+                {
+                    "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.code"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.data"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.string"
+                }
+            ],
+            "sjasmplus-code-lens.dezog.analyzeAtCursor": [
+                {
+                    "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.disassembly"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.flowChart"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.callGraph"
                 }
             ],
             "commandPalette": [
                 {
                     "command": "sjasmplus-code-lens.find-labels-with-no-reference",
+                    "when": "false"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.movePCtoCursor",
+                    "when": "false"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.code",
+                    "when": "false"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.data",
+                    "when": "false"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.disassemblyAtCursor.string",
+                    "when": "false"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.disassembly",
+                    "when": "false"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.flowChart",
+                    "when": "false"
+                },
+                {
+                    "command": "sjasmplus-code-lens.dezog.analyzeAtCursor.callGraph",
                     "when": "false"
                 }
             ]
@@ -421,7 +531,8 @@
         ],
         "configurationDefaults": {
             "[sjasmplus]": {
-                "editor.colorDecorators": false
+                "editor.colorDecorators": false,
+                "editor.defaultFormatter": "kolnogorov.sjasmplus-code-lens"
             },
             "[sjasmplus-list]": {
                 "editor.colorDecorators": false

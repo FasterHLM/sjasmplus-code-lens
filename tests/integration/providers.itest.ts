@@ -108,6 +108,22 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		assert.ok(ranges.some(r => r.start === 13 && r.end === 16), 'STRUCT..ENDS');
 	});
 
+	test('the formatter of sjasmplus files by default, the DeZog context menu commands', async () => {
+		const formatter = () => vscode.workspace.getConfiguration('editor', {languageId: 'sjasmplus'}).get('defaultFormatter');
+		assert.equal(formatter(), 'kolnogorov.sjasmplus-code-lens');
+		// Also when the user settings name another formatter for all languages
+		await vscode.workspace.getConfiguration('editor').update('defaultFormatter', 'maziac.asm-code-lens', vscode.ConfigurationTarget.Global);
+		try {
+			assert.equal(formatter(), 'kolnogorov.sjasmplus-code-lens');
+		}
+		finally {
+			await vscode.workspace.getConfiguration('editor').update('defaultFormatter', undefined, vscode.ConfigurationTarget.Global);
+		}
+		const commands = await vscode.commands.getCommands(true);
+		assert.ok(commands.includes('sjasmplus-code-lens.dezog.movePCtoCursor'));
+		assert.ok(commands.includes('sjasmplus-code-lens.dezog.analyzeAtCursor.callGraph'));
+	});
+
 	test('rename', async () => {
 		const edit: vscode.WorkspaceEdit = await vscode.commands.executeCommand('vscode.executeDocumentRenameProvider', utilUri, pos(util, 'clear:'), 'cls');
 		const changes = edit.entries().flatMap(([uri, edits]) => edits.map(e => `${path.basename(uri.fsPath)}:${e.range.start.line}:${e.range.start.character}-${e.range.end.character}=${e.newText}`)).sort();

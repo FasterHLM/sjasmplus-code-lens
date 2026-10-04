@@ -56,7 +56,7 @@ The key bindings are the defaults of VS Code on Windows and Linux.
 | See undefined labels | Problems panel (Ctrl+Shift+M) |
 | Find dead code | Right-click in the editor > "Find Labels with no Reference". The list appears in the Output panel. |
 | Format | Shift+Alt+F for the file, Ctrl+K Ctrl+F for the selection, or `"editor.formatOnSave": true` |
-| Fold | The arrows next to the line numbers: labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF`, `LUA` |
+| Fold | The arrows next to the line numbers: labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF`, `LUA` (a label folds up to the next label, within the block it is in) |
 | Block comments | Typing `/*` adds `*/` on the next line. To turn this off: `"[sjasmplus]": { "editor.autoClosingComments": "never" }` |
 | Convert numbers | The "Hexadecimal Calculator" view in the Explorer (and in Run and Debug) |
 | Assembler in Markdown | Start a code block with ` ```sjasmplus `, ` ```z80 ` or ` ```asm ` (` ```sjasmplus-list ` for listings) |
@@ -72,7 +72,7 @@ References to labels that are defined nowhere are reported, like sjasmplus would
 
 ### Formatting
 
-The formatter keeps the style of each file instead of imposing one. It only changes whitespace (and the case of keywords if you ask for it); labels stay at the beginning of the line and the code itself never changes.
+The formatter keeps the style of each file instead of imposing one. It is the default formatter of sjasmplus files, also when `editor.defaultFormatter` names another extension. It only changes whitespace (and the case of keywords if you ask for it); labels stay at the beginning of the line and the code itself never changes.
 
 - Instructions move to the column most lines of the file use. Lines indented deeper are nested code (e.g. the body of an `IF` inside a routine) and keep their offset. Directives written left of the instructions (`MODULE`, `IFDEF`, `DEFINE`, ...) keep their own column.
 - Comments after code are aligned within each group of consecutive lines.
@@ -129,7 +129,7 @@ When a `.asm` file opens in another language, or `files.associations` has such e
 }
 ```
 
-Extensions that work on top of a language need sjasmplus added to their settings, e.g. Z80 Assembly meter: `"z80-asm-meter.languageIds": ["sjasmplus"]`. DeZog breakpoints can be set in sjasmplus files and listings: the extension enables breakpoints for its languages.
+Extensions that work on top of a language need sjasmplus added to their settings, e.g. Z80 Assembly meter: `"z80-asm-meter.languageIds": ["sjasmplus"]`. DeZog breakpoints can be set in sjasmplus files and listings: the extension enables breakpoints for its languages. During a DeZog session the context menu of sjasmplus files has the items DeZog shows for its own language: Move Program Counter to Cursor, Disassembly at Cursor, Analyze at Cursor.
 
 ## How it understands your project
 

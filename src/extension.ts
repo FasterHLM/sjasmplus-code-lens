@@ -81,7 +81,24 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         await Commands.findLabelsWithNoReference(projects, doc);
     }));
+
+    // DeZog shows these items in the context menu of its own languages only: the same items in
+    // sjasmplus files. Its commands take the position from the active editor.
+    for (const command of DEZOG_CONTEXT_COMMANDS)
+        context.subscriptions.push(vscode.commands.registerCommand('sjasmplus-code-lens.' + command, () => vscode.commands.executeCommand(command)));
 }
+
+
+/** The commands of the DeZog context menu during debugging (package.json has them with our prefix). */
+const DEZOG_CONTEXT_COMMANDS = [
+    'dezog.movePCtoCursor',
+    'dezog.disassemblyAtCursor.code',
+    'dezog.disassemblyAtCursor.data',
+    'dezog.disassemblyAtCursor.string',
+    'dezog.analyzeAtCursor.disassembly',
+    'dezog.analyzeAtCursor.flowChart',
+    'dezog.analyzeAtCursor.callGraph'
+];
 
 
 /**
