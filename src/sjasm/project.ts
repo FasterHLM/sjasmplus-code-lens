@@ -13,6 +13,7 @@ import * as path from 'path';
 import {Token, TokenKind} from './lexer';
 import {FileOperand, getFileOperand, LabelField, ParsedLine, ParsedText, parseText, Statement} from './parser';
 import {BINARY_DIRECTIVES, BRANCHES, CONDITIONS, DATA_DIRECTIVES, DEFL_DIRECTIVES, DIRECTIVES, EQU_DIRECTIVES, MNEMONICS, NON_EXPRESSION_DIRECTIVES, PREDEFINED, REGISTERS, SAVE_DIRECTIVES, SAVE_KEYWORDS, TRANSPARENT_DIRECTIVES, WORD_OPERATORS} from './keywords';
+import {editDistance, maxTypos} from './suggest';
 
 
 export type SymbolKind = 'label' | 'data' | 'equ' | 'defl' | 'struct' | 'field' | 'macro' | 'module' | 'define' | 'temp' | 'macrolocal';
@@ -277,6 +278,22 @@ export function splitMacroArguments(line: string, operands: Token[]): string[] {
 	push(operands.length);
 	return args;
 }
+
+
+/** The lookup order of a label reference (keys) in a module, after the label that local labels belong to. */
+function lookupKeys(written: string, module: string, localPrefix: string): string[] {
+	if (written.startsWith('@'))
+		return ['L:' + written.substring(1)];
+	if (written.startsWith('.'))
+		return ['L:' + localPrefix + written];
+	if (module)
+		return ['L:' + module + '.' + written, 'L:' + written];
+	return ['L:' + written];
+}
+
+
+/** The kinds of definitions that a reference to a label can mean. */
+const LABEL_KINDS = new Set<SymbolKind>(['label', 'data', 'equ', 'defl']);
 
 
 /** What a label can look like after the substitution of a macro argument. */
@@ -546,6 +563,61 @@ export class Project {
 		this.update();
 		const lines = this.inactiveLines.get(fileKey(filePath))?.lines;
 		return lines ? [...lines].sort((a, b) => a - b) : [];
+	}
+
+
+	/**
+	 * Names that a reference to an unknown label may have meant, as they are to be written at that place
+	 * (at most three, the best first). Labels of another module and local labels of another label, written
+	 * without what they need ("clear" for "util.clear", ".loop" for "start.loop"), and labels that have another
+	 * case; if there is none, labels that differ by a typo. Each name resolves to the label the way a
+	 * reference in the program does: relative to the module, or with @ if a name of the module hides it.
+	 */
+	public suggestLabels(file: string, line: number, written: string): string[] {
+		this.update();
+		if (written.startsWith('@') || written.length === 0)
+			return [];
+		const scope = this.scopeAt(file, line);
+		const resolve = (text: string) => lookupKeys(text, scope.module, scope.localPrefix).find(k => this.defsByKey.has(k));
+		const lower = written.toLowerCase();
+		const typos = maxTypos(written.length);
+		const exact: {text: string, rank: string}[] = [];
+		const similar: {text: string, rank: string, distance: number}[] = [];
+		const seen = new Set<string>();
+		for (const def of this.getAllDefinitions()) {
+			if (!def.key.startsWith('L:') || !LABEL_KINDS.has(def.kind) || seen.has(def.key))
+				continue;
+			seen.add(def.key);
+			const full = def.name;
+			const local = def.written.startsWith('.');
+			// What the label can be called without the module, and (a local label) without the label it belongs to
+			const tail = def.module && full.startsWith(def.module + '.') ? full.substring(def.module.length + 1) : full;
+			const aliases = [full, tail, ...(local ? [def.written, def.written.substring(1)] : [])];
+			// How it is written here
+			let text: string;
+			if (local && full === scope.localPrefix + def.written)
+				text = def.written;
+			else {
+				const relative = scope.module && full.startsWith(scope.module + '.') ? full.substring(scope.module.length + 1) : full;
+				text = resolve(relative) === def.key ? relative : '@' + full;
+			}
+			if (text === written)
+				continue;
+			// The labels of this scope first (the module, the label of the local ones), then the others
+			const here = local ? full === scope.localPrefix + def.written : def.module === scope.module;
+			const rank = (here ? '0' : '1') + text;
+			if (aliases.some(a => a === written || a.toLowerCase() === lower))
+				exact.push({text, rank});
+			else if (typos > 0) {
+				const distance = Math.min(...aliases.map(a => editDistance(lower, a.toLowerCase())));
+				if (distance <= typos)
+					similar.push({text, rank, distance});
+			}
+		}
+		const unique = (names: string[]) => names.filter((n, i) => names.indexOf(n) === i);
+		if (exact.length > 0)
+			return unique(exact.sort((a, b) => a.rank.localeCompare(b.rank)).map(e => e.text)).slice(0, 3);
+		return unique(similar.sort((a, b) => a.distance - b.distance || a.rank.localeCompare(b.rank)).map(e => e.text)).slice(0, 3);
 	}
 
 
@@ -1384,14 +1456,7 @@ export class Project {
 
 	/** The lookup order of a label reference (keys). */
 	protected labelCandidates(written: string, state: WalkState): string[] {
-		if (written.startsWith('@'))
-			return ['L:' + written.substring(1)];
-		if (written.startsWith('.'))
-			return ['L:' + this.localPrefix(state) + written];
-		const module = this.moduleName(state);
-		if (module)
-			return ['L:' + module + '.' + written, 'L:' + written];
-		return ['L:' + written];
+		return lookupKeys(written, this.moduleName(state), this.localPrefix(state));
 	}
 
 

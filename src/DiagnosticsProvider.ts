@@ -3,6 +3,11 @@ import {PackageInfo} from './packageinfo';
 import {ProjectManager, SOURCE_LANGUAGE} from './projectmanager';
 
 
+/** The source and the start of the message of the diagnostics of references to labels that are not found (the quick fixes look for them). */
+export const DIAGNOSTIC_SOURCE = 'sjasmplus Code Lens';
+export const UNRESOLVED_LABEL = 'Label not found: ';
+
+
 const SEVERITIES: {[name: string]: vscode.DiagnosticSeverity} = {
 	error: vscode.DiagnosticSeverity.Error,
 	warning: vscode.DiagnosticSeverity.Warning,
@@ -58,8 +63,8 @@ export class DiagnosticsProvider implements vscode.Disposable {
 			if (severity === undefined)
 				continue;	// off
 			for (const ref of project.getReportableUnresolved()) {
-				const diagnostic = new vscode.Diagnostic(new vscode.Range(ref.line, ref.start, ref.line, ref.end), `Label not found: ${ref.written}`, severity);
-				diagnostic.source = 'sjasmplus Code Lens';
+				const diagnostic = new vscode.Diagnostic(new vscode.Range(ref.line, ref.start, ref.line, ref.end), UNRESOLVED_LABEL + ref.written, severity);
+				diagnostic.source = DIAGNOSTIC_SOURCE;
 				let list = byFile.get(ref.file);
 				if (!list)
 					byFile.set(ref.file, list = []);

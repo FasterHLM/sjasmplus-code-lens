@@ -15,6 +15,7 @@ import {WorkspaceSymbolProvider} from './WorkspaceSymbolProvider';
 import {FoldingProvider} from './FoldingRangeProvider';
 import {FormattingProvider} from './FormattingProvider';
 import {DiagnosticsProvider} from './DiagnosticsProvider';
+import {QuickFixProvider} from './QuickFixProvider';
 import {SEMANTIC_LEGEND, SemanticTokensProvider} from './SemanticTokensProvider';
 import {checkFileAssociations, fixFileAssociations, watchFileAssociations} from './AssociationCheck';
 import {LISTING_LANGUAGE, ProjectManager, SOURCE_LANGUAGE} from './projectmanager';
@@ -32,6 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Unresolved labels and dimmed inactive blocks
     context.subscriptions.push(new DiagnosticsProvider(projects));
+    context.subscriptions.push(vscode.languages.registerCodeActionsProvider({scheme: "file", language: SOURCE_LANGUAGE}, new QuickFixProvider(projects), {providedCodeActionKinds: QuickFixProvider.kinds}));
 
     // Semantic highlighting (checks the setting itself)
     context.subscriptions.push(vscode.languages.registerDocumentSemanticTokensProvider(

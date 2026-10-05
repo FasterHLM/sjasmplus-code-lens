@@ -502,6 +502,81 @@ suite('sjasm project', () => {
 			assert.equal(kind(n), 'label', n);
 	});
 
+	test('suggestions for an unknown label: another module, another case, a typo, a local label of another label', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    MODULE util',				// 1
+				'clear   nop',					// 2
+				'.fast   nop',					// 3
+				'    ENDMODULE',				// 4
+				'    MODULE screen',			// 5
+				'base    equ #4000',			// 6
+				'    ENDMODULE',				// 7
+				'start   nop',					// 8
+				'.loop   nop',					// 9
+				'other   nop',					// 10: the local labels below belong to "other"
+				'.loopx  nop',					// 11
+				'    call clear',				// 12
+				'    call Clear',				// 13
+				'    call Start',				// 14
+				'    call strat',				// 15
+				'    call baze',				// 16
+				'    jr .loopz',				// 17
+				'    jr .loop',					// 18
+				'    call zzz',					// 19
+				'    call ab',					// 20
+				'    call utl.clear'			// 21
+			].join('\n')
+		});
+		const at = (line: number, written: string) => p.suggestLabels(filePath('main.asm'), line, written);
+		assert.deepEqual(at(12, 'clear'), ['util.clear'], 'a label of another module, written without it');
+		assert.deepEqual(at(13, 'Clear'), ['util.clear'], 'another case, and another module');
+		assert.deepEqual(at(14, 'Start'), ['start'], 'another case');
+		assert.deepEqual(at(15, 'strat'), ['start'], 'two letters swapped');
+		assert.deepEqual(at(16, 'baze'), ['screen.base'], 'a typo in the label of a module');
+		assert.deepEqual(at(17, '.loopz'), ['.loopx', 'start.loop'], 'a typo: the local labels of this label first, then the ones of another');
+		assert.deepEqual(at(18, '.loop'), ['start.loop'], 'a local label of another label: written with it');
+		assert.deepEqual(at(19, 'zzz'), [], 'nothing alike');
+		assert.deepEqual(at(20, 'ab'), [], 'a short name has no typos');
+		assert.deepEqual(at(21, 'utl.clear'), ['util.clear'], 'a typo in the module');
+	});
+
+	test('suggestions: a name of up to three characters has no typos, a longer one has', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'abc     nop',					// 1
+				'xyzw    nop',					// 2
+				'    call abd',					// 3: alike "abc", but short
+				'    call xyzq'					// 4: alike "xyzw"
+			].join('\n')
+		});
+		assert.deepEqual(p.suggestLabels(filePath('main.asm'), 3, 'abd'), [], 'three characters');
+		assert.deepEqual(p.suggestLabels(filePath('main.asm'), 4, 'xyzq'), ['xyzw'], 'four characters');
+	});
+
+	test('suggestions: inside a module the name of the module is left out, a global label that a name of the module hides is written with @', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',		// 0
+				'    MODULE m',					// 1
+				'x       nop',					// 2
+				'    call X',					// 3: in module m
+				'    ENDMODULE',				// 4
+				'x       nop',					// 5: the global x
+				'    MODULE m',					// 6
+				'    call X',					// 7
+				'    ENDMODULE',				// 8
+				'    call X'					// 9: not in a module
+			].join('\n')
+		});
+		const at = (line: number) => p.suggestLabels(filePath('main.asm'), line, 'X');
+		assert.deepEqual(at(3), ['x', '@x'], 'x is m.x here, the global x needs @');
+		assert.deepEqual(at(7), ['x', '@x']);
+		assert.deepEqual(at(9), ['x', 'm.x'], 'the global x first');
+	});
+
 	test('conditional assembly: inactive blocks', () => {
 		const p = makeProject({
 			'main.asm': [

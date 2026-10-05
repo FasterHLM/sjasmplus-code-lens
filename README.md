@@ -12,7 +12,7 @@ A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://
 - Hover with the comments above a definition
 - Completions of labels, local labels, macros, defines, instructions and directives
 - Outline view, breadcrumbs, "Go to Symbol in Workspace"
-- Problems for labels that are not defined ("Label not found")
+- Problems for labels that are not defined ("Label not found"), with quick fixes: the label that was meant, in another module or with another case or a typo
 - `IFDEF`/`IFNDEF` blocks that are not assembled are dimmed
 - Semantic highlighting: code labels, data, constants, structs, fields, macros, defines and modules in their own colors
 - Formatting that adapts to the style of each file
@@ -54,6 +54,7 @@ The key bindings are the defaults of VS Code on Windows and Linux.
 | Jump within the file | Outline view in the Explorer, breadcrumbs above the editor, or Ctrl+Shift+O |
 | Jump to any symbol of the project | Ctrl+T, then type a part of the name |
 | See undefined labels | Problems panel (Ctrl+Shift+M) |
+| Fix a label that is not found | Quick fix (Ctrl+.) on the warning: `Change to 'util.clear'` |
 | Find dead code | Right-click in the editor > "Find Labels with no Reference". The list appears in the Output panel. |
 | Format | Shift+Alt+F for the file, Ctrl+K Ctrl+F for the selection, or `"editor.formatOnSave": true` |
 | Fold | The arrows next to the line numbers: labels, comment blocks, `MODULE`, `STRUCT`, `MACRO`, `DUP`/`REPT`, `IF`, `LUA` (a label folds up to the next label, within the block it is in) |
@@ -69,6 +70,8 @@ References to labels that are defined nowhere are reported, like sjasmplus would
 - macro arguments and macro bodies, the values of `DEFINE`s, the text of `ASSERT` messages,
 - a label that `IF EXIST label` / `IFN EXIST label` tests, and the uses of it in the blocks of that condition (including `ELSE`): the label may be absent there by design,
 - files that no program includes. A program is a main file with `DEVICE`, `OUTPUT` or one of the `SAVE...` directives; other files are fragments, e.g. old code lying around.
+
+A quick fix (Ctrl+.) offers up to three labels that the name may have meant, written the way they resolve at that place: a label of another module with its module (`clear` for `util.clear`), a local label with the label it belongs to (`.loop` for `start.loop`), a label with another case, and, if there is none of these, a label that differs by a typo (a changed, missing, added or swapped letter; names of up to three characters have no typos). Inside a module the name of the module is left out, and a global label that a name of the module hides is written with `@`. The names that macro expansions make are not offered.
 
 ### Formatting
 
