@@ -247,6 +247,38 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		}
 	});
 
+	test('quick fixes for a label that is not found: another module, a typo, nothing alike', async () => {
+		const fixUri = vscode.Uri.file(path.join(fixture, 'quickfix.asm'));
+		const doc = await vscode.workspace.openTextDocument(fixUri);
+		await vscode.window.showTextDocument(doc);
+		// "call wipe" is on line 6, "call bgein" on 7, "call nothing_alike" on 8
+		const diagnosticLines = async (expected: number[]) => {
+			let seen: number[] = [];
+			for (let i = 0; i < 50; i++) {
+				seen = vscode.languages.getDiagnostics(fixUri).map(d => d.range.start.line).sort((a, b) => a - b);
+				if (seen.join() === expected.join())
+					break;
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			return seen;
+		};
+		assert.deepEqual(await diagnosticLines([6, 7, 8]), [6, 7, 8]);
+		const fixes = async (line: number) => {
+			const actions: vscode.CodeAction[] = await vscode.commands.executeCommand('vscode.executeCodeActionProvider', fixUri, new vscode.Range(line, 0, line, 30), vscode.CodeActionKind.QuickFix.value);
+			return actions.filter(a => a.kind?.value === 'quickfix');
+		};
+		const wipe = await fixes(6);
+		assert.deepEqual(wipe.map(a => a.title), ["Change to 'tools.wipe'"]);
+		assert.equal(wipe[0].isPreferred, true, 'the only suggestion is the preferred fix');
+		assert.deepEqual((await fixes(7)).map(a => a.title), ["Change to 'begin'"]);
+		assert.deepEqual((await fixes(8)).map(a => a.title), [], 'nothing alike: no fix');
+		// the fix replaces the name and the warning goes
+		assert.ok(await vscode.workspace.applyEdit(wipe[0].edit!));
+		assert.equal(doc.lineAt(6).text, '\tcall tools.wipe');
+		assert.deepEqual(await diagnosticLines([7, 8]), [7, 8]);
+		await vscode.commands.executeCommand('workbench.action.files.revert');
+	});
+
 	test('code lens follows edits', async () => {
 		const editor = await vscode.window.showTextDocument(main);
 		await editor.edit(b => b.insert(new vscode.Position(10, 0), '\tcall util.clear\n'));
