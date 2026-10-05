@@ -1,8 +1,8 @@
-import * as path from 'path';
 import {strict as assert} from 'assert';
 import * as vscode from 'vscode';
 import {FuncCache} from './funccache';
 import {PackageInfo} from './packageinfo';
+import {Associations, associationFor, globExtensions} from './fileassociations';
 
 /**
  * The known language IDs.
@@ -51,44 +51,23 @@ export class LanguageId {
 	 * @returns  E.g. "** /*.{asm, inc, s}"
 	 */
 	protected static _getGlobalIncludeForLanguageId(languageId: AllowedLanguageIds): string {
-		// Package json
-		const pckgJson = PackageInfo.extension.packageJSON;
-		const languages = pckgJson.contributes.languages;
-		const exts: string[] = [];
-		for (const lang of languages) {
-			if (lang.id == languageId) {
-				// Use the extensions defined for the language
-				exts.push(...lang.extensions.map(ext => ext.substring(1)));
-				break;
-			}
-		}
+		// Package json: the extensions defined for the language
+		const languages: {id: string, extensions?: string[]}[] = PackageInfo.extension.packageJSON.contributes.languages;
+		const own = (languages.find(lang => lang.id === languageId)?.extensions ?? []).map(ext => ext.toLowerCase());
 
-		// User's file associations
-		//const files = vscode.workspace.getConfiguration("files");// as any as Map<string, string>;
-		const filesAssociations = vscode.workspace.getConfiguration("files.associations");
-		// Make iterable
-		const iterAssocs = Object.entries(filesAssociations);
-		// Loop (contains also function entries)
-		for (const [ext, lang] of iterAssocs) {
-			if (typeof lang == 'string') { // Skip functions
-				// remove *
-				const onlyExt = path.extname(ext).substring(1);
-				if (lang == languageId) {
-					// Add
-					exts.push(onlyExt);
-				}
-				else {
-					const k = exts.indexOf(onlyExt);
-					if (k >= 0) {
-						// Remove
-						exts.splice(k, 1);
-					}
-				}
-			}
-		}
+		// User's file associations decide where they say something (the longest glob wins)
+		const associations = vscode.workspace.getConfiguration('files').get<Associations>('associations') ?? {};
+		const candidates = new Set(own);
+		for (const pattern of Object.keys(associations))
+			for (const ext of globExtensions(pattern) ?? [])
+				candidates.add(ext);
+		const exts = [...candidates].filter(ext => {
+			const association = associationFor(associations, ext);
+			return association ? association.language === languageId : own.includes(ext);
+		});
 
 		// Create glob string
-		const glob = '**/*.{' + exts.join(',') + '}';
+		const glob = '**/*.{' + exts.map(ext => ext.substring(1)).join(',') + '}';
 		return glob;    // E.g. "**/*.{asm,inc,s}"
 	}
 }

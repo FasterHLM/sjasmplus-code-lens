@@ -38,7 +38,11 @@
         "workspaceContains:**/*.{asm,a80,z80,inc}",
         "onLanguage:asm-collection",
         "onLanguage:z80-macroasm",
-        "onLanguage:z80-asm"
+        "onLanguage:z80-asm",
+        "onLanguage:asm-z80-sjasmplus",
+        "onLanguage:asm-x86-nasm",
+        "onLanguage:asm-x86-gas",
+        "onLanguage:asm-x86-masm"
     ],
     "main": "./out/extension.js",
     "contributes": {

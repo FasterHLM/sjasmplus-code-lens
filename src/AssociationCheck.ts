@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import {PackageInfo} from './packageinfo';
-import {CompetingLanguage, ConflictingAssociation, ContributedLanguage, findCompetingLanguages, findConflictingAssociations} from './fileassociations';
+import {Associations, CompetingLanguage, ConflictingAssociation, ContributedLanguage, findCompetingLanguages, findConflictingAssociations, fixAssociations} from './fileassociations';
 
 
 const DONT_ASK_KEY = 'associations.dontAsk';
@@ -23,7 +23,7 @@ function extensionsOf(id: string): string[] {
 }
 
 
-/** The languages contributed by the other enabled extensions. */
+/** The languages contributed by the other enabled extensions (also those without file extensions). */
 function otherLanguages(): ContributedLanguage[] {
 	const result: ContributedLanguage[] = [];
 	for (const ext of vscode.extensions.all) {
@@ -32,16 +32,23 @@ function otherLanguages(): ContributedLanguage[] {
 		const name: string | undefined = ext.packageJSON.displayName;
 		const extensionName = name && !name.startsWith('%') ? name : ext.id;
 		for (const l of ext.packageJSON.contributes?.languages ?? []) {
-			if (typeof l?.id === 'string' && Array.isArray(l.extensions))
-				result.push({extensionId: ext.id, extensionName, language: l.id, extensions: l.extensions});
+			if (typeof l?.id === 'string')
+				result.push({extensionId: ext.id, extensionName, language: l.id, extensions: Array.isArray(l.extensions) ? l.extensions : []});
 		}
 	}
 	return result;
 }
 
 
+/** E.g. ' (NASM Code Lens)' for "asm-x86-nasm", '' for a language of no other extension. */
+function ownerOf(language: string): string {
+	const owner = otherLanguages().find(l => l.language === language);
+	return owner ? ` (${owner.extensionName})` : '';
+}
+
+
 async function getConflicts(): Promise<Conflicts> {
-	const associations = vscode.workspace.getConfiguration('files').get<{[pattern: string]: string}>('associations') ?? {};
+	const associations = vscode.workspace.getConfiguration('files').get<Associations>('associations') ?? {};
 	const sources = extensionsOf('sjasmplus');
 	const listings = extensionsOf('sjasmplus-list');
 	return {
@@ -53,7 +60,15 @@ async function getConflicts(): Promise<Conflicts> {
 
 /** The globs a fix associates with sjasmplus, e.g. ["*.asm", "*.inc"]. */
 function patternsOf(conflicts: Conflicts): string[] {
-	return [...new Set([...conflicts.settings.map(c => c.pattern), ...conflicts.extensions.map(c => c.pattern)])];
+	return [...new Set([...conflicts.settings.map(c => c.fixPattern), ...conflicts.extensions.map(c => c.pattern)])];
+}
+
+
+/** E.g. 'the setting "files.associations" has "*.{asm,inc,s}": "asm-z80-sjasmplus" (NASM Code Lens)'. */
+function describeSettings(conflicts: ConflictingAssociation[]): string {
+	const byPattern = new Map(conflicts.map(c => [c.pattern, c]));
+	const entries = [...byPattern.values()].map(c => `"${c.pattern}": "${c.language}"${c.missing ? ' (not installed)' : ownerOf(c.language)}`);
+	return `the setting "files.associations" has ${entries.join(', ')}`;
 }
 
 
@@ -107,7 +122,7 @@ export async function checkFileAssociations(context: vscode.ExtensionContext, al
 		conflicts.extensions = [];	// Only reported when a file really opens in another language
 	const reasons: string[] = [];
 	if (conflicts.settings.length > 0)
-		reasons.push(`the setting "files.associations" has ${conflicts.settings.map(c => `"${c.pattern}": "${c.language}"${c.missing ? ' (not installed)' : ''}`).join(', ')}`);
+		reasons.push(describeSettings(conflicts.settings));
 	reasons.push(...describeExtensions(conflicts.extensions));
 	if (reasons.length === 0) {
 		if (always)
@@ -131,11 +146,18 @@ async function checkDocument(context: vscode.ExtensionContext, doc: vscode.TextD
 	if (context.globalState.get<boolean>(DONT_ASK_KEY))
 		return;
 	const conflicts = await getConflicts();
-	// Not when the user chose the language for this file or in "files.associations"
-	const taker = conflicts.extensions.find(c => c.extension === ext && c.language === doc.languageId);
-	if (!taker || asked)
+	if (asked)
 		return;
-	await offerFix(context, conflicts, `${path.basename(doc.fileName)} is opened as "${doc.languageId}" of the extension "${taker.extensionName}", so this extension does not work on it`);
+	// E.g. written by another extension after the check at the start
+	const setting = conflicts.settings.find(c => c.extension === ext);
+	if (setting) {
+		await offerFix(context, conflicts, `${path.basename(doc.fileName)} is opened as "${doc.languageId}" because ${describeSettings([setting])}, so this extension does not work on it`);
+		return;
+	}
+	// Not when the user chose the language for this file
+	const taker = conflicts.extensions.find(c => c.extension === ext && c.language === doc.languageId);
+	if (taker)
+		await offerFix(context, conflicts, `${path.basename(doc.fileName)} is opened as "${doc.languageId}" of the extension "${taker.extensionName}", so this extension does not work on it`);
 }
 
 
@@ -151,7 +173,7 @@ export function watchFileAssociations(context: vscode.ExtensionContext) {
 
 
 /**
- * Associates the assembler files with sjasmplus.
+ * Associates the assembler files with sjasmplus, see fixAssociations().
  * @param scope 'workspace': in the workspace settings (overrides the user settings),
  * 'everywhere': where the conflicting entries are defined (user and workspace
  * settings), file types of other extensions in the user settings.
@@ -159,28 +181,16 @@ export function watchFileAssociations(context: vscode.ExtensionContext) {
 export async function fixFileAssociations(scope: 'workspace' | 'everywhere') {
 	const conflicts = await getConflicts();
 	const files = vscode.workspace.getConfiguration('files');
-	const inspected = files.inspect<{[pattern: string]: string}>('associations');
-	const targets: {target: vscode.ConfigurationTarget, value: {[pattern: string]: string} | undefined}[] = scope === 'workspace'
+	const inspected = files.inspect<Associations>('associations');
+	const targets: {target: vscode.ConfigurationTarget, value: Associations | undefined}[] = scope === 'workspace'
 		? [{target: vscode.ConfigurationTarget.Workspace, value: inspected?.workspaceValue}]
 		: [{target: vscode.ConfigurationTarget.Global, value: inspected?.globalValue}, {target: vscode.ConfigurationTarget.Workspace, value: inspected?.workspaceValue}];
 	for (const {target, value} of targets) {
 		if (target === vscode.ConfigurationTarget.Workspace && !vscode.workspace.workspaceFolders)
 			continue;
-		const updated = {...(value ?? {})};
-		let changed = false;
-		for (const c of conflicts.settings) {
-			if (scope === 'workspace' || (value && c.pattern in value)) {
-				updated[c.pattern] = c.target;
-				changed = true;
-			}
-		}
-		if (scope === 'workspace' || target === vscode.ConfigurationTarget.Global) {
-			for (const c of conflicts.extensions) {
-				updated[c.pattern] = c.target;
-				changed = true;
-			}
-		}
-		if (changed)
+		const competing = scope === 'workspace' || target === vscode.ConfigurationTarget.Global ? conflicts.extensions : [];
+		const updated = fixAssociations(value, conflicts.settings, competing, scope === 'workspace');
+		if (updated)
 			await files.update('associations', updated, target);
 	}
 }
