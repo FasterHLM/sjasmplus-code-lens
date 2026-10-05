@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.9
 - NASM Code Lens (ASM Code Lens 3.x) took the assembler files and the extension did nothing, without a word. On its first start it writes `"*.{asm,inc,s,nasm,yasm,-----…}": "asm-x86-nasm"` to `files.associations`; VS Code takes the longest matching entry, so it wins over `"*.asm": "sjasmplus"`, and after NASM Code Lens is uninstalled the files open as plain text. Globs of several extensions (`*.{asm,inc}`) are now recognized, and which entry wins is decided as in VS Code. The fix takes our file types out of such a glob where it is defined ("Everywhere") or overrides it in the workspace settings ("In this workspace"). The question also comes when a file opens in another language because of the settings, e.g. after another extension changed them.
 - Folding: an `IF` block (or any other block) with a label right below its first line folds again. The region of the label above ended on the `IF` line and the region of the label in the block went past `ENDIF`; VS Code drops a range that overlaps another without nesting, here the block. A label now folds up to the next label within the block it is in, and before a block it would not contain completely.
 - This extension is the default formatter of sjasmplus files (`"[sjasmplus]": {"editor.defaultFormatter": ...}`): formatting works without choosing a formatter, also when `editor.defaultFormatter` names another extension.
