@@ -1,0 +1,11 @@
+# file opened: main.asm
+ 1   0000               ; Memory map
+ 2   0000               lst_base:    equ #8000    ; the start of the area
+ 3   0000               lst_buffer:    equ #c000    ; the buffer
+ 4   0000               ; Own comment
+ 5   0000               lst_third:    equ 1
+ 6   0000
+ 7   0000                   ld hl,lst_buffer
+ 8   0000                   ld de,lst_third
+ 9   0000                   ld bc,lst_base
+# file closed: main.asm
