@@ -370,7 +370,7 @@
                 "sjasmplus-code-lens.hexCalculator.hexPrefix": {
                     "order": 123,
                     "scope": "application",
-                    "markdownDescription": "The prefix to use for hex values, e.g. `0x` or `$`",
+                    "markdownDescription": "The prefix to use for hex values in the calculator and in the hover, e.g. `0x` or `$`",
                     "type": "string",
                     "default": "0x"
                 }

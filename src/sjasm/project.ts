@@ -357,6 +357,8 @@ export class Project {
 	protected defsByFile = new Map<string, SymbolDef[]>();
 	/** The names made by macro expansions: they are not in defsByFile (no text of their own). */
 	protected madeDefs: SymbolDef[] = [];
+	/** The values of the constants by the place of the definition (null: not known, or not the same in every walk). */
+	protected constantValues = new Map<string, number | null>();
 	protected includes = new Map<string, IncludeLink[]>();
 	protected scopes = new Map<string, ScopePoint[]>();
 	/**
@@ -532,6 +534,16 @@ export class Project {
 
 
 	/**
+	 * The value of a constant (EQU, DEFL) at its definition, if it is known: the line runs once and
+	 * its expression is made of known values (see isCertain). Undefined if not, also for a string.
+	 */
+	public getConstantValue(def: SymbolDef): number | undefined {
+		this.update();
+		return this.constantValues.get(this.constantKey(def)) ?? undefined;
+	}
+
+
+	/**
 	 * The names made by macro expansions ("gb_exit" for "decode gb" of the label "tag_exit" in the macro), unique.
 	 * They have no text of their own: each is defined at the label in the macro. Not in getAllDefinitions().
 	 */
@@ -610,6 +622,7 @@ export class Project {
 		this.occurrences.clear();
 		this.defsByFile.clear();
 		this.madeDefs = [];
+		this.constantValues.clear();
 		this.includes.clear();
 		this.scopes.clear();
 		this.inactiveLines.clear();
@@ -1101,7 +1114,10 @@ export class Project {
 
 		// A constant: its value is known to the conditions that come later (if it is certain that and how the line runs)
 		if ((kind === 'equ' || kind === 'defl') && first && !entry.listing && !this.isInactive(state)) {
-			state.constants.set(def.key, this.isCertain(state) ? (evaluateExpression(first.operands, this.evalEnv(state)) ?? null) : null);
+			const value = this.isCertain(state) ? (evaluateExpression(first.operands, this.evalEnv(state)) ?? null) : null;
+			state.constants.set(def.key, value);
+			// A string is a number made of its characters for sjasmplus: shown as a value it would only confuse
+			this.noteConstantValue(def, first.operands.some(t => t.kind === TokenKind.String) ? null : value);
 			if (kind === 'defl')
 				state.variables.add(def.key);
 		}
@@ -1602,6 +1618,19 @@ export class Project {
 			return false;
 		tags.add(tag);
 		return true;
+	}
+
+
+	protected constantKey(def: SymbolDef): string {
+		return fileKey(def.file) + ':' + def.line + ':' + def.start;
+	}
+
+
+	/** Keeps the value of a definition; a definition that was walked with another value (another root, a loop) has none. */
+	protected noteConstantValue(def: SymbolDef, value: number | null) {
+		const key = this.constantKey(def);
+		const old = this.constantValues.get(key);
+		this.constantValues.set(key, old === undefined || old === value ? value : null);
 	}
 
 
