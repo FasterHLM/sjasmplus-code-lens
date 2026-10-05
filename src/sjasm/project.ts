@@ -242,6 +242,8 @@ export function fileKey(filePath: string): string {
 
 const CONDITIONAL_OPS = new Set(['jp', 'jr', 'call', 'ret']);
 const FILE_FIRST_OPERAND = new Set(['incbin', 'binary', 'insert', 'inchob', 'inctrd', 'savebin', 'savedev', 'savehob', 'savesna', 'savetap', 'savetrd', 'save3dos', 'saveamsdos', 'savecdt', 'savecpcsna', 'savecpr', 'savehex', 'shellexec', 'emptytrd', 'emptytap']);
+/** Directives of NON_EXPRESSION_DIRECTIVES with a file name: sjasmplus replaces a define in it like in any other line. */
+const FILE_NAME_DIRECTIVES = new Set(['emptytrd', 'emptytap', 'output', 'tapout', 'hexout', 'labelslist', 'cspectmap']);
 /** Directives that produce output: a root file with one of them is a program (not a fragment). */
 const PROGRAM_DIRECTIVES = new Set(['device', 'output', 'savesna', 'savebin', 'savetap', 'savetrd', 'savenex', 'savedev', 'savehob', 'save3dos', 'saveamsdos', 'savecdt', 'savecpcsna', 'savecpr', 'savehex', 'emptytrd', 'emptytap']);
 const MAX_INCLUDE_DEPTH = 20;
@@ -1527,8 +1529,14 @@ export class Project {
 				return;
 		}
 
-		if (NON_EXPRESSION_DIRECTIVES.has(op))
+		if (NON_EXPRESSION_DIRECTIVES.has(op)) {
+			// The operands are no expressions, but a define in the file name is a use of it
+			if (FILE_NAME_DIRECTIVES.has(op))
+				for (const t of operands)
+					if (t.kind === TokenKind.Ident)
+						this.addPendingDefineRef(state, t, file, line);
 			return;
+		}
 
 		// First operand is a file name
 		let exprOperands = operands;

@@ -699,6 +699,31 @@ suite('sjasm project', () => {
 		assert.equal(refKey(p, 'build.asm', 2, 'MAIN_FILE'), 'D:MAIN_FILE');
 	});
 
+	test('a define in the file name of EMPTYTRD, EMPTYTAP, OUTPUT, TAPOUT, HEXOUT, LABELSLIST and CSPECTMAP is a use of it', () => {
+		// sjasmplus replaces the define in the whole line, also behind the first operand
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',				// 0
+				'    DEFINE NAME "build/disk"',			// 1
+				'    EMPTYTRD NAME .. ".trd"',			// 2
+				'    EMPTYTAP "build/" .. NAME .. ".tap"',	// 3
+				'    OUTPUT NAME',					// 4
+				'    TAPOUT "x.tap", NAME',				// 5
+				'    HEXOUT NAME .. ".hex"',			// 6
+				'    LABELSLIST NAME .. ".lbl", 1',		// 7
+				'    CSPECTMAP NAME',				// 8
+				'    EMPTYTRD "NAME.trd"',				// 9: inside a string: not a use
+				'    OUTPUT "f.bin", t',				// 10: the mode is not a label
+				'    EMPTYTAP other_name'				// 11: not a define
+			].join('\n')
+		});
+		assert.deepEqual(p.getReferences('D:NAME').map(r => r.line).sort((a, b) => a - b), [2, 3, 4, 5, 6, 7, 8]);
+		assert.equal(refKey(p, 'main.asm', 2, 'NAME'), 'D:NAME');
+		assert.equal(refKey(p, 'main.asm', 3, 'NAME'), 'D:NAME');
+		// Words that are no define stay quiet
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), []);
+	});
+
 	test('soft references: macro arguments, define values, IFDEF, ASSERT, SAVETAP, Lua', () => {
 		const p = makeProject({
 			'main.asm': [
