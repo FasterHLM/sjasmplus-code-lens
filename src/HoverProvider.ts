@@ -60,7 +60,7 @@ export class HoverProvider implements vscode.HoverProvider {
         const copy = [...lines];
         if (def.line < copy.length)
             copy[def.line] = '';
-        const comments = readCommentsForLine(copy, def.line).map(s => s.trim());
+        const comments = readCommentsForLine(copy, def.line, project.isListing(def.file)).map(s => s.trim());
         if (isSelf && comments.length === 0 && def.kind !== 'equ' && def.kind !== 'defl')
             return undefined;
 

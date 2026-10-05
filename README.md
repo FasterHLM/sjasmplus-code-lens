@@ -49,7 +49,7 @@ The key bindings are the defaults of VS Code on Windows and Linux.
 | Go to a definition | F12 or Ctrl+click. On `vdp.Cls` a click on `vdp` goes to the module, on `Cls` to the label. On an `INCLUDE` line it opens the file. On a struct instance field (`pos.x`) it shows the instance and the field of the struct. |
 | Peek a definition | Alt+F12 |
 | Rename a label, struct, field, macro, define or module | F2. Only the part of each name that belongs to the symbol changes: renaming `clear` in module `util` turns `util.clear` into `util.cls` and `util.clear.fast` into `util.cls.fast`. |
-| Read the description of a routine | Hover the label: the comment lines above the definition are shown |
+| Read the description of a routine | Hover the label: the comment lines directly above the definition are shown. Only lines that hold nothing but a comment count; a comment behind code belongs to that code. |
 | Complete a name | Ctrl+Space. Typing `.` lists the local labels of the current routine, `module.` the labels of the module. |
 | Jump within the file | Outline view in the Explorer, breadcrumbs above the editor, or Ctrl+Shift+O |
 | Jump to any symbol of the project | Ctrl+T, then type a part of the name |

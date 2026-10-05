@@ -305,6 +305,101 @@ suite('comments', () => {
             assert.equal(result.length, 0);
         });
 
+        test('trailing comment of the code line above', () => {
+            // A comment after code belongs to that code, not to the label below
+            let result = readCommentsForLine([
+                '; Block',
+                'a:      nop     ; trailing',
+                'label: ',
+            ], 2);
+            assert.equal(result.length, 0);
+
+            result = readCommentsForLine([
+                'a:      nop     // trailing',
+                'label: ',
+            ], 1);
+            assert.equal(result.length, 0);
+
+            result = readCommentsForLine([
+                '; Block',
+                'a       equ 1   ; trailing',
+                'b       equ 2',
+            ], 2);
+            assert.equal(result.length, 1);
+            assert.equal(result[0], 'b       equ 2');
+        });
+
+        test('chain of comment lines stops at code', () => {
+            const result = readCommentsForLine([
+                ' ; Bla1 ',
+                'nop ; code ',
+                ' ; Bla2 ',
+                '// Bla3 ',
+                'label: ',
+            ], 4);
+            assert.equal(result.length, 2);
+            assert.equal(result[0], ' Bla2 ');
+            assert.equal(result[1], ' Bla3 ');
+        });
+
+        test('code with a comment prefix inside a string', () => {
+            const result = readCommentsForLine([
+                '; Bla1 ',
+                '\tdb "a;b"',
+                'label: ',
+            ], 2);
+            assert.equal(result.length, 0);
+        });
+
+        test('code line with */ in the trailing comment', () => {
+            const result = readCommentsForLine([
+                '/*',
+                ' Bla1 ',
+                'nop ; end */',
+                'label: ',
+            ], 3);
+            assert.equal(result.length, 0);
+        });
+
+        test('indented comment lines', () => {
+            const result = readCommentsForLine([
+                '\t\t; Bla1 ',
+                '    // Bla2 ',
+                'label: ',
+            ], 2);
+            assert.equal(result.length, 2);
+            assert.equal(result[0], ' Bla1 ');
+            assert.equal(result[1], ' Bla2 ');
+        });
+
+        test('list file: comment lines and code lines', () => {
+            // The text in the address/bytes columns is not code
+            let result = readCommentsForLine([
+                '  10  8000              ; Bla1 ',
+                '  11  8000 3E 01        ld a,1 ; code ',
+                '  12  8002              ; Bla2 ',
+                '  13  8002              ;; Bla3 ',
+                'label: ',
+            ], 4, true);
+            assert.equal(result.length, 2);
+            assert.equal(result[0], ' Bla2 ');
+            assert.equal(result[1], '; Bla3 ');
+
+            // The code line is not a comment
+            result = readCommentsForLine([
+                '  11  8000 3E 01        ld a,1 ; code ',
+                'label: ',
+            ], 1, true);
+            assert.equal(result.length, 0);
+
+            // Without the flag the columns are text before the comment
+            result = readCommentsForLine([
+                '  10  8000              ; Bla1 ',
+                'label: ',
+            ], 1);
+            assert.equal(result.length, 0);
+        });
+
         test('before label list', () => {
             // For list file
             let result = readCommentsForLine([
@@ -315,7 +410,7 @@ suite('comments', () => {
                 '625++C4D1              ; Bla5 ',
                 '626++C4D1 FE 10        ; Bla6 ',
                 'label: ',
-            ], 6);
+            ], 6, true);
             assert.equal(result.length, 6);
             assert.equal(result[0], ' Bla1 ');
             assert.equal(result[1], '  Bla2 ');

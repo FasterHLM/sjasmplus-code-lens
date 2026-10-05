@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
+import {readCommentsForLine, setCustomCommentPrefix} from '../src/comments';
 import {scanLine, TokenKind} from '../src/sjasm/lexer';
 import {parseLine, parseText} from '../src/sjasm/parser';
 import {Project, splitMacroArguments, substituteMacroArguments} from '../src/sjasm/project';
@@ -414,6 +415,21 @@ suite('sjasm project', () => {
 		assert.equal(clear[0].start, 24);
 		assert.deepEqual(p.getReferences('L:clear_screen').map(r => r.line + 1), [592, 972]);
 		assert.deepEqual(p.getReferences('L:fill_backg').map(r => r.line + 1), [213, 640]);
+		// The file is known as a listing; the comments above a label skip the address columns
+		assert.equal(p.isListing(file), true);
+		assert.equal(p.isListing(file + '.other'), false);
+		setCustomCommentPrefix();
+		const lines = p.getLines(file)!;
+		const above = (label: string) => readCommentsForLine(lines, p.getDefinitions('L:' + label)[0].line, true).map(c => c.trim());
+		assert.deepEqual(above('clear_screen'), ['Clears the screen']);
+		assert.deepEqual(above('pause'), ['Pauses for a while.', 'de: wait time, ca. de*0.1ms']);
+		// ... and are not found when the file is taken for source text
+		assert.deepEqual(readCommentsForLine(lines, p.getDefinitions('L:pause')[0].line), []);
+	});
+
+	test('a source file is not a listing', () => {
+		const p = makeProject({'main.asm': 'start: nop'});
+		assert.equal(p.isListing(path.resolve('/prj/main.asm')), false);
 	});
 
 	test('modules and structs (tests/data/modulesstruct.asm)', () => {

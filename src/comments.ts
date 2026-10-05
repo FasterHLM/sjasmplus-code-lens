@@ -1,3 +1,6 @@
+import {LISTING_PREFIX_WIDTH} from './sjasm/parser';
+
+
 // Is set on start and whenever the settings change.
 
 // It holds all prefixes (like ';' and '//') that are used as comment prefixes.
@@ -108,17 +111,32 @@ export function stripAllComments(lines: Array<string>) {
 
 
 /**
+ * Tells if the text in front of a comment prefix is empty, i.e. the line
+ * consists of the comment alone.
+ * @param before The text of the line before the comment prefix.
+ * @param listing True for a list file: the first columns are addresses and bytes.
+ */
+function isCommentOnly(before: string, listing: boolean): boolean {
+	return before.substring(listing ? LISTING_PREFIX_WIDTH : 0).trim() === '';
+}
+
+
+/**
  * Reads the lines above the given lineNr.
  * If it is commentary text it is returned otherwise undefined is returned.
  * The function can read commentary text with ',', '//', the custom prefix or /*.
+ * Only lines that consist of a comment alone are taken from above: a comment
+ * behind code belongs to that code and ends the search.
  * If there is a single line comment on the current line this is used instead.
  * Furthermore, if the line contains an 'equ' without a comment. The complete
  * line is returned in order to see the contents of the equ while hovering.
  * @param lines The complete text file.
  * @param lineNr The lines above (<) lineNr are searched.
+ * @param listing True for a list file: the address/bytes columns in front of
+ * the source text do not count as code.
  * @returns An array with comments or an empty array if nothing found.
  */
-export function readCommentsForLine(lines: string[], lineNr: number): string[] {
+export function readCommentsForLine(lines: string[], lineNr: number, listing = false): string[] {
 	// Safety check
 	if (lines.length == 0 || lineNr < 0 || lineNr >= lines.length)
 		return [];
@@ -149,13 +167,15 @@ export function readCommentsForLine(lines: string[], lineNr: number): string[] {
 			// Now check which one to use:
 			if (j < i) {
 				// Single line comment was first
+				if (!isCommentOnly(firstPrevMatch![1], listing))
+					return hoverTexts;	// A comment behind code
 				hoverTexts.unshift(firstPrevMatch![3]);
 				startLine--;
 				while (startLine >= 0) {
 					// Check if line starts with ";" etc.
 					const line = lines[startLine];
 					const match = commentHoverPrefixes.exec(line);
-					if (!match)
+					if (!match || !isCommentOnly(match[1], listing))
 						break;
 					// Add text
 					hoverTexts.unshift(match[3]);

@@ -264,3 +264,56 @@ suite('sjasmplus Code Lens in VS Code: labels made by macros, EXIST', () => {
 		assert.deepEqual(diagnostics.map(d => `${d.range.start.line}:${d.message}`), ['10:Label not found: not_defined_here']);
 	});
 });
+
+
+suite('sjasmplus Code Lens in VS Code: comments in the hover', () => {
+	const commentsUri = vscode.Uri.file(path.join(fixture, 'comments.asm'));
+	let comments: vscode.TextDocument;
+
+	suiteSetup(async () => {
+		comments = await vscode.workspace.openTextDocument(commentsUri);
+		assert.equal(comments.languageId, 'sjasmplus');
+	});
+
+	/** The hover text of the name at the end of 'use', a text of the document. The markdown escapes "_" as "\_": compare without the backslashes. */
+	async function hoverText(use: string, doc = comments): Promise<string> {
+		const hovers: vscode.Hover[] = await vscode.commands.executeCommand('vscode.executeHoverProvider', doc.uri, pos(doc, use, use.length - 3));
+		return hovers.flatMap(h => h.contents.map(c => typeof c === 'string' ? c : c.value)).join('\n').replace(/\\/g, '');
+	}
+
+	test('the comment of the code line above is not shown', async () => {
+		// "mem_buffer" is right below "mem_base ... ;start of the area" and the memory map
+		const text = await hoverText('ld hl,mem_buffer');
+		assert.ok(text.includes('mem_buffer'), text);
+		assert.ok(!text.includes('start of the area'), text);
+		assert.ok(!text.includes('Memory map'), text);
+		assert.ok(!text.includes('Own comment'), text);
+	});
+
+	test('the comment lines right above the definition are shown, up to the code', async () => {
+		const text = await hoverText('ld de,mem_third');
+		assert.ok(text.includes('Own comment'), text);
+		assert.ok(text.includes('of the third'), text);
+		assert.ok(!text.includes('the buffer'), text);
+		assert.ok(!text.includes('Memory map'), text);
+	});
+
+	test('the memory map is shown for the definition right below it', async () => {
+		const text = await hoverText('ld bc,mem_base');
+		assert.ok(text.includes('Memory map'), text);
+	});
+
+	test('list file: the same, the address columns are not code', async () => {
+		const listingUri = vscode.Uri.file(path.join(fixture, 'listing.lst'));
+		const listing = await vscode.workspace.openTextDocument(listingUri);
+		assert.equal(listing.languageId, 'sjasmplus-list');
+		const buffer = await hoverText('ld hl,lst_buffer', listing);
+		assert.ok(buffer.includes('lst_buffer'), buffer);
+		assert.ok(!buffer.includes('start of the area'), buffer);
+		assert.ok(!buffer.includes('Memory map'), buffer);
+		const third = await hoverText('ld de,lst_third', listing);
+		assert.ok(third.includes('Own comment'), third);
+		assert.ok(!third.includes('Memory map'), third);
+		assert.ok((await hoverText('ld bc,lst_base', listing)).includes('Memory map'));
+	});
+});

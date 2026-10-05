@@ -419,6 +419,12 @@ export class Project {
 	}
 
 
+	/** True if the file known to the project is a sjasmplus listing. */
+	public isListing(filePath: string): boolean {
+		return this.files.get(fileKey(filePath))?.listing ?? false;
+	}
+
+
 	/** Returns the text lines of a file known to the project. */
 	public getLines(filePath: string): string[] | undefined {
 		const entry = this.files.get(fileKey(filePath));
