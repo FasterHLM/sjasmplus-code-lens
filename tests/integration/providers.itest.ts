@@ -78,6 +78,57 @@ suite('sjasmplus Code Lens in VS Code', () => {
 		assert.ok(text.includes('Clears the screen'), text);
 	});
 
+	test('hover shows the value of a constant, and the forms of a number', async () => {
+		const textOf = (hovers: vscode.Hover[]) => hovers.flatMap(h => h.contents.map(c => typeof c === 'string' ? c : c.value)).join('\n');
+		// "ld hl,screen.base": screen.base is "equ #4000" in util.asm
+		const constant = textOf(await vscode.commands.executeCommand('vscode.executeHoverProvider', mainUri, pos(main, 'ld hl,screen.base', 14)));
+		assert.ok(constant.includes('16384 (0x4000, %0100000000000000)'), constant);
+		// "ld hl,#4000" in util.asm: a number that is not a symbol
+		const number = textOf(await vscode.commands.executeCommand('vscode.executeHoverProvider', utilUri, pos(util, 'ld hl,#4000', 8)));
+		assert.ok(number.includes('16384 (0x4000, %0100000000000000)'), number);
+		// a label that is not a constant has no value
+		const label = textOf(await vscode.commands.executeCommand('vscode.executeHoverProvider', mainUri, pos(main, 'util.clear', 7)));
+		assert.ok(!label.includes('16384'), label);
+	});
+
+	test('hover: the value at a definition, the prefix of the setting, and no forms where a number is not a number', async () => {
+		const textOf = (hovers: vscode.Hover[]) => hovers.flatMap(h => h.contents.map(c => typeof c === 'string' ? c : c.value)).join('\n');
+		const sourceUri = vscode.Uri.file(path.join(fixture, 'hovervalues.asm'));
+		const listingUri = vscode.Uri.file(path.join(fixture, 'hovervalues.lst'));
+		const source = await vscode.workspace.openTextDocument(sourceUri);
+		const listing = await vscode.workspace.openTextDocument(listingUri);
+		assert.equal(source.languageId, 'sjasmplus');
+		assert.equal(listing.languageId, 'sjasmplus-list');
+		const hover = async (doc: vscode.TextDocument, text: string, offset = 0) =>
+			textOf(await vscode.commands.executeCommand('vscode.executeHoverProvider', doc.uri, pos(doc, text, offset)));
+		// the value at the definition itself, and a number in code
+		assert.ok((await hover(source, 'SIZE\tequ', 1)).includes('32 (0x20, %00100000)'));
+		assert.ok((await hover(source, '#FF', 1)).includes('255 (0xFF, %11111111)'));
+		// no forms in a comment, in a string, on a temporary label, in a block comment, in Lua, and in a listing
+		const nothing = async (doc: vscode.TextDocument, text: string, offset: number, where: string) =>
+			assert.ok(!(await hover(doc, text, offset)).includes('(0x'), where);
+		await nothing(source, '12345', 1, 'a comment');
+		await nothing(source, 'with 99', 6, 'a comment after code');
+		await nothing(source, '"7"', 1, 'a string');
+		await nothing(source, 'djnz\t1B', 6, 'a reference to a temporary label');
+		await nothing(source, '42', 1, 'the first line of a block comment');
+		await nothing(source, 'with 77', 6, 'a line inside a block comment');
+		await nothing(source, 'x = 55', 5, 'Lua');
+		await nothing(listing, '8000', 1, 'an address in a listing');
+		await nothing(listing, '3E 01', 0, 'a byte in a listing');
+		// the prefix of hex numbers is the one of the setting hexCalculator.hexPrefix
+		const settings = vscode.workspace.getConfiguration('sjasmplus-code-lens');
+		await settings.update('hexCalculator.hexPrefix', '#', vscode.ConfigurationTarget.Global);
+		try {
+			assert.ok((await hover(source, '#FF', 1)).includes('255 (#FF, %11111111)'));
+			assert.ok((await hover(source, 'SIZE\tequ', 1)).includes('32 (#20, %00100000)'));
+		}
+		finally {
+			await settings.update('hexCalculator.hexPrefix', undefined, vscode.ConfigurationTarget.Global);
+		}
+		assert.ok((await hover(source, '#FF', 1)).includes('255 (0xFF, %11111111)'));
+	});
+
 	test('outline', async () => {
 		const symbols: vscode.DocumentSymbol[] = await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', utilUri);
 		const tree = (s: vscode.DocumentSymbol): string => s.name + (s.children.length ? '(' + s.children.map(tree).join(',') + ')' : '');

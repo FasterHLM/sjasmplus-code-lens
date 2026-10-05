@@ -9,7 +9,7 @@ A Visual Studio Code extension for Z80 assembly written for [sjasmplus](https://
 - Syntax highlighting for sjasmplus sources and listing files, also in Markdown code blocks
 - Code lenses with the number of references above labels, constants, structs, struct fields, macros and defines
 - Go to Definition, Find All References, Rename
-- Hover with the comments above a definition
+- Hover with the comments above a definition, the value of a constant (`EQU`, `DEFL`) and the forms of a number (decimal, hex, binary)
 - Completions of labels, local labels, macros, defines, instructions and directives
 - Outline view, breadcrumbs, "Go to Symbol in Workspace"
 - Problems for labels that are not defined ("Label not found")
@@ -50,6 +50,7 @@ The key bindings are the defaults of VS Code on Windows and Linux.
 | Peek a definition | Alt+F12 |
 | Rename a label, struct, field, macro, define or module | F2. Only the part of each name that belongs to the symbol changes: renaming `clear` in module `util` turns `util.clear` into `util.cls` and `util.clear.fast` into `util.cls.fast`. |
 | Read the description of a routine | Hover the label: the comment lines above the definition are shown |
+| See the value of a constant | Hover the name of an `EQU` or `DEFL`, at the definition or at a use: `= 22528 (0x5800, %0101100000000000)`, when the value is known (see the limitations of the evaluation of `IF`); hover a number to see its forms |
 | Complete a name | Ctrl+Space. Typing `.` lists the local labels of the current routine, `module.` the labels of the module. |
 | Jump within the file | Outline view in the Explorer, breadcrumbs above the editor, or Ctrl+Shift+O |
 | Jump to any symbol of the project | Ctrl+T, then type a part of the name |
@@ -163,7 +164,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 | Setting | Default | Description |
 |---|---|---|
 | `enableCodeLenses` | `true` | Reference counts above the labels. |
-| `enableHovering` | `true` | Comments of a definition when hovering. |
+| `enableHovering` | `true` | Comments of a definition, the value of a constant and the forms of a number when hovering. |
 | `enableCompletions` | `true` | Completions. |
 | `completionsRequiredLength` | `1` | Characters to type before completions are offered (not needed after a `.`). |
 | `enableGotoDefinition` | `true` | Go to Definition. |
@@ -199,7 +200,7 @@ All settings start with `sjasmplus-code-lens.` and can be set per workspace fold
 |---|---|---|
 | `hexCalculator.showInExplorer` | `true` | Show the calculator in the Explorer. |
 | `hexCalculator.showInDebug` | `true` | Show the calculator in Run and Debug. |
-| `hexCalculator.hexPrefix` | `0x` | *user* Prefix of hex values, e.g. `$` or `#`. |
+| `hexCalculator.hexPrefix` | `0x` | *user* Prefix of hex values in the calculator and in the hover, e.g. `$` or `#`. |
 
 ## Commands
 

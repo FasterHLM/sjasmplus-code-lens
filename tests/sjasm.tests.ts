@@ -971,6 +971,58 @@ suite('sjasm project', () => {
 		assert.deepEqual(p.getInactiveLines(filePath('main.asm')), [6], 'only the body of the EQU condition');
 	});
 
+	test('the value of a constant (EQU, DEFL) is known per definition, when it is certain', () => {
+		const p = makeProject({
+			'main.asm': [
+				'    DEVICE ZXSPECTRUM48',							// 0
+				'SCREEN  equ #4000',								// 1
+				'ATTRS   equ SCREEN + #1800',						// 2: from another constant
+				'COUNT   equ ATTRS - SCREEN',						// 3
+				'v       = 5',										// 4
+				'v       = v * 2',									// 5: the same name, another definition and value
+				'unk     equ some_label',							// 6: not a constant
+				'text    equ "AB"',									// 7: a string: no value is shown
+				'    DUP 2',										// 8
+				'inloop  = 1',										// 9: runs twice
+				'    EDUP',											// 10
+				'    IF unknown_label',								// 11
+				'inbranch equ 4',									// 12: it may not run
+				'    ENDIF',										// 13
+				'neg     equ -1',									// 14
+				'big     equ #12345678'									// 15
+			].join('\n')
+		});
+		const value = (name: string, nth = 0) => {
+			const def = p.getDefinitions('L:' + name)[nth];
+			return def && p.getConstantValue(def);
+		};
+		assert.equal(value('SCREEN'), 0x4000);
+		assert.equal(value('ATTRS'), 0x5800);
+		assert.equal(value('COUNT'), 0x1800);
+		assert.equal(value('v', 0), 5, 'the first definition of v');
+		assert.equal(value('v', 1), 10, 'the second definition of v');
+		for (const name of ['unk', 'text', 'inloop', 'inbranch'])
+			assert.equal(value(name), undefined, name);
+		assert.equal(value('neg'), -1);
+		assert.equal(value('big'), 0x12345678);
+	});
+
+	test('the value of a constant: not shown if the definition has another value in another program', () => {
+		const files = (x2: string) => ({
+			'a.asm': ['    DEVICE ZXSPECTRUM48', 'X       equ 1', '    INCLUDE "inc.asm"'].join('\n'),
+			'b.asm': ['    DEVICE ZXSPECTRUM48', `X       equ ${x2}`, '    INCLUDE "inc.asm"'].join('\n'),
+			'inc.asm': 'c       equ X + 1'
+		});
+		const valueOfC = (x2: string) => {
+			const p = makeProject(files(x2));
+			const defs = p.getDefinitions('L:c');
+			assert.equal(defs.length, 1);
+			return p.getConstantValue(defs[0]);
+		};
+		assert.equal(valueOfC('1'), 2, 'the same value in both programs');
+		assert.equal(valueOfC('5'), undefined, 'another value in the second program');
+	});
+
 	test('IF: a value that is not certain is not known (unknown branch, loop, macro, DEFINE+, Lua, macro parameter)', () => {
 		const p = makeProject({
 			'main.asm': [
