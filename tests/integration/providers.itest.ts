@@ -264,3 +264,48 @@ suite('sjasmplus Code Lens in VS Code: labels made by macros, EXIST', () => {
 		assert.deepEqual(diagnostics.map(d => `${d.range.start.line}:${d.message}`), ['10:Label not found: not_defined_here']);
 	});
 });
+
+
+suite('sjasmplus Code Lens in VS Code: a define in the file name of a directive', () => {
+	const uri = vscode.Uri.file(path.join(fixture, 'filedefs.asm'));
+	let doc: vscode.TextDocument;
+
+	suiteSetup(async () => {
+		doc = await vscode.workspace.openTextDocument(uri);
+		assert.equal(doc.languageId, 'sjasmplus');
+	});
+
+	// The define is on line 2, its uses on the lines of EMPTYTRD (3) and SAVETRD (4)
+	test('the define has the color of a define in both lines', async () => {
+		const legend: vscode.SemanticTokensLegend = await vscode.commands.executeCommand('vscode.provideDocumentSemanticTokensLegend', uri);
+		const tokens: vscode.SemanticTokens = await vscode.commands.executeCommand('vscode.provideDocumentSemanticTokens', uri);
+		const decoded: string[] = [];
+		let line = 0, char = 0;
+		for (let i = 0; i < tokens.data.length; i += 5) {
+			const [dLine, dChar, length, type, mods] = tokens.data.slice(i, i + 5);
+			line += dLine;
+			char = dLine === 0 ? char + dChar : dChar;
+			const modifiers = legend.tokenModifiers.filter((m, k) => mods & (1 << k));
+			decoded.push(`${line}:${doc.lineAt(line).text.substr(char, length)} ${[legend.tokenTypes[type], ...modifiers].join('.')}`);
+		}
+		for (const expected of ['3:DiskName macro.readonly', '4:DiskName macro.readonly'])
+			assert.ok(decoded.includes(expected), expected + ' missing in ' + decoded.join(', '));
+	});
+
+	test('the reference count above the define counts both uses, hover and go to definition work', async () => {
+		const lenses: vscode.CodeLens[] = await vscode.commands.executeCommand('vscode.executeCodeLensProvider', uri, 100);
+		const titles = lenses.map(l => `${l.range.start.line}:${l.command?.title}`);
+		assert.ok(titles.includes('2:2 references'), titles.join(', '));
+		const where = pos(doc, 'emptytrd DiskName', 12);
+		const hovers: vscode.Hover[] = await vscode.commands.executeCommand('vscode.executeHoverProvider', uri, where);
+		const text = hovers.flatMap(h => h.contents.map(c => typeof c === 'string' ? c : c.value)).join('\n');
+		assert.ok(text.includes('DiskName') && text.includes('define'), text);
+		assert.deepEqual(lines(await vscode.commands.executeCommand('vscode.executeDefinitionProvider', uri, where)), ['filedefs.asm:2']);
+	});
+
+	test('rename changes the define in the definition and in both uses', async () => {
+		const edit: vscode.WorkspaceEdit = await vscode.commands.executeCommand('vscode.executeDocumentRenameProvider', uri, pos(doc, 'emptytrd DiskName', 12), 'ImageName');
+		const changed = edit.get(uri).map(e => `${e.range.start.line}:${e.newText}`).sort();
+		assert.deepEqual(changed, ['2:ImageName', '3:ImageName', '4:ImageName']);
+	});
+});
