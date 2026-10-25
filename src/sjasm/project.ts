@@ -392,6 +392,8 @@ export class Project {
 	/** Roots that are programs (see PROGRAM_DIRECTIVES). */
 	protected programRoots = new Set<number>();
 	protected unresolved: SymbolRef[] = [];
+	/** The unresolved references per file and position (see markSeen). */
+	protected unresolvedAt = new Map<string, Map<number, SymbolRef>>();
 
 	// Walk state shared by all roots
 	protected pending: PendingRef[] = [];
@@ -585,8 +587,14 @@ export class Project {
 	 */
 	public getReportableUnresolved(): SymbolRef[] {
 		this.update();
+		return this.getUnresolved().filter(r => this.isReportable(r));
+	}
+
+
+	/** An unresolved reference worth reporting (see getReportableUnresolved). */
+	protected isReportable(ref: SymbolRef): boolean {
 		const programs = this.programRoots;
-		return this.getUnresolved().filter(r => !r.soft && !r.inactive && (programs.size === 0 || programs.has(r.root)));
+		return !ref.soft && !ref.inactive && (programs.size === 0 || programs.has(ref.root));
 	}
 
 
@@ -719,6 +727,7 @@ export class Project {
 		this.seen.clear();
 		this.scopedFiles.clear();
 		this.seenOccurrence.clear();
+		this.unresolvedAt.clear();
 
 		this.collectDefinedNames();
 
@@ -1668,16 +1677,31 @@ export class Project {
 
 
 	protected storeRef(ref: SymbolRef) {
-		if (!this.markSeen(fileKey(ref.file), ref.line, ref.start, ref.key ?? ''))
+		const fk = fileKey(ref.file);
+		if (!this.markSeen(fk, ref.line, ref.start, ref.key ?? '')) {
+			// The same place in another walk (a file included twice or by two programs):
+			// an unresolved reference is worth reporting if one of the walks reports it
+			const stored = ref.key ? undefined : this.unresolvedAt.get(fk)?.get(ref.line * 65536 + ref.start);
+			if (stored && !this.isReportable(stored) && this.isReportable(ref)) {
+				stored.inactive = ref.inactive;
+				stored.soft = ref.soft;
+				stored.root = ref.root;
+			}
 			return;
+		}
 		if (ref.key) {
 			let list = this.refsByKey.get(ref.key);
 			if (!list)
 				this.refsByKey.set(ref.key, list = []);
 			list.push(ref);
 		}
-		else
+		else {
 			this.unresolved.push(ref);
+			let byPos = this.unresolvedAt.get(fk);
+			if (!byPos)
+				this.unresolvedAt.set(fk, byPos = new Map());
+			byPos.set(ref.line * 65536 + ref.start, ref);
+		}
 		this.addOccurrence({file: ref.file, line: ref.line, start: ref.start, end: ref.end, written: ref.written, key: ref.key, isDef: false});
 	}
 
