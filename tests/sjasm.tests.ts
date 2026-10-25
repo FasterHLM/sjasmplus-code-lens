@@ -826,6 +826,48 @@ suite('sjasm project', () => {
 		assert.deepEqual(q.getReportableUnresolved().map(r => r.written), ['missing_a']);
 	});
 
+	test('a file walked twice: a reference is reported if one walk assembles it', () => {
+		// Included twice, the first time in a block that is not assembled: sjasmplus reports the second
+		let p = makeProject({
+			'main.asm': '    DEVICE ZXSPECTRUM48\n    IFDEF NOPE\n    include "part.asm"\n    ENDIF\n    include "part.asm"',
+			'part.asm': '    call missing'
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), ['missing']);
+		// The block is assembled in the second inclusion only
+		p = makeProject({
+			'main.asm': '    DEVICE ZXSPECTRUM48\n    include "part.asm"\n    DEFINE MODE2\n    include "part.asm"',
+			'part.asm': '    IFDEF MODE2\n    call missing\n    ENDIF'
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), ['missing']);
+		// The same with IF, when its condition is known
+		p = makeProject({
+			'main.asm': '    DEVICE ZXSPECTRUM48\nMODE DEFL 1\n    include "part.asm"\nMODE DEFL 2\n    include "part.asm"',
+			'part.asm': '    IF MODE == 2\n    call missing\n    ENDIF'
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), ['missing']);
+		// Not assembled in any walk: not reported
+		p = makeProject({
+			'main.asm': '    DEVICE ZXSPECTRUM48\n    IFDEF NOPE\n    include "part.asm"\n    include "part.asm"\n    ENDIF',
+			'part.asm': '    call missing'
+		});
+		assert.deepEqual(p.getReportableUnresolved().map(r => r.written), []);
+	});
+
+	test('a file shared by two programs: the report does not depend on the order of the files', () => {
+		// Only d.asm assembles the call (sjasmplus: d.asm fails, c.asm does not), with IFDEF and with IF
+		for (const [cDefine, dDefine, condition] of [['', '    DEFINE M\n', 'IFDEF M'], ['M EQU 1\n', 'M EQU 2\n', 'IF M == 2']]) {
+			const files: {[name: string]: string} = {
+				'c.asm': '    DEVICE ZXSPECTRUM48\n' + cDefine + '    include "shared.asm"',
+				'd.asm': '    DEVICE ZXSPECTRUM48\n' + dDefine + '    include "shared.asm"',
+				'shared.asm': '    ' + condition + '\n    call missing\n    ENDIF'
+			};
+			for (const order of [['c.asm', 'd.asm', 'shared.asm'], ['d.asm', 'c.asm', 'shared.asm'], ['shared.asm', 'c.asm', 'd.asm']]) {
+				const p = makeProject(Object.fromEntries(order.map(f => [f, files[f]])));
+				assert.deepEqual(p.getReportableUnresolved().map(r => r.written), ['missing'], condition + ': ' + order.join(' '));
+			}
+		}
+	});
+
 	test('update after change', () => {
 		const p = makeProject({'main.asm': 'lbl: nop\n jp lbl'});
 		assert.equal(p.getReferences('L:lbl').length, 1);
